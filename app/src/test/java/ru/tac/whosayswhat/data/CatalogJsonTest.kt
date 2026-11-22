@@ -5,6 +5,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 
 /**
  * Проверяет, что каталог в assets валиден и все заявленные звуки реально
@@ -21,7 +23,7 @@ class CatalogJsonTest {
             File(assetsDir, "catalog.json").readText(),
         )
 
-        assertTrue("В каталоге меньше двух животных", catalog.animals.size >= 2)
+        assertTrue("В каталоге меньше 16 животных", catalog.animals.size >= 16)
         assertEquals(
             "id животных должны быть уникальны",
             catalog.animals.size,
@@ -31,6 +33,7 @@ class CatalogJsonTest {
         catalog.animals.forEach { animal ->
             assertTrue("Пустой id", animal.id.isNotBlank())
             assertTrue("Пустое имя у ${animal.id}", animal.name.isNotBlank())
+            assertTrue("Нет картинки у ${animal.id}", !animal.image.isNullOrBlank())
             assertTrue(
                 "Нет файла ${animal.soundFile} у ${animal.id}",
                 File(assetsDir, animal.soundFile).isFile,
@@ -45,6 +48,39 @@ class CatalogJsonTest {
                 assertTrue("Нет файла озвучки $path у ${animal.id}", File(assetsDir, path).isFile)
             }
         }
+    }
+
+    @Test
+    fun `artwork is 512 square with transparent background`() {
+        val catalog = json.decodeFromString<Catalog>(
+            File(assetsDir, "catalog.json").readText(),
+        )
+        val checked = mutableSetOf<String>()
+
+        val pngSignature = byteArrayOf(
+            0x89.toByte(), 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
+        )
+
+        catalog.animals.forEach { animal ->
+            val path = animal.image ?: return@forEach
+            if (!checked.add(path)) return@forEach
+            val bytes = File(assetsDir, path).readBytes()
+            assertTrue("$path не PNG", bytes.size > 29)
+            assertTrue(
+                "$path не PNG",
+                bytes.copyOfRange(0, 8).contentEquals(pngSignature),
+            )
+            val header = ByteBuffer.wrap(bytes).order(ByteOrder.BIG_ENDIAN)
+            assertEquals("Ширина $path", 512, header.getInt(16))
+            assertEquals("Высота $path", 512, header.getInt(20))
+            val colorType = bytes[25].toInt() and 0xFF
+            assertTrue(
+                "У $path нет альфа-канала (colorType=$colorType)",
+                colorType == 6 || colorType == 4,
+            )
+        }
+
+        assertTrue("Не проверено ни одной картинки", checked.isNotEmpty())
     }
 
     @Test

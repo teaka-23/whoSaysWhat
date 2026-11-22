@@ -36,57 +36,20 @@ def rounded_mask(size: int, radius: int) -> Image.Image:
 
 
 def draw_icon(size: int = 512, scale: int = 4) -> Image.Image:
-    # Рисуем всегда в системе координат 512×512, затем уменьшаем до нужного
-    # размера: так иконка не обрезается при вставке в баннер.
-    s = 512 * scale
-    image = Image.new("RGBA", (s, s), SUNNY)
-    draw = ImageDraw.Draw(image)
-
-    def px(value: float) -> int:
-        return int(value * scale)
-
-    def box(left, top, right, bottom):
-        return (px(left), px(top), px(right), px(bottom))
-
-    width = max(1, px(7))
-
-    # Уши: внешняя часть и нежный розовый внутри.
-    for left in (56, 356):
-        draw.ellipse(box(left, 168, left + 100, 288), fill=WHITE, outline=INK, width=width)
-        draw.ellipse(
-            box(left + 22, 192, left + 78, 262), fill=PEACH, outline=None
-        )
-
-    # Морда.
-    draw.ellipse(box(108, 112, 404, 438), fill=WHITE, outline=INK, width=width)
-
-    # Пятна.
-    draw.ellipse(box(146, 146, 226, 212), fill=BROWN)
-    draw.ellipse(box(312, 206, 382, 264), fill=BROWN)
-
-    # Щёки.
-    blush = Image.new("RGBA", image.size, (0, 0, 0, 0))
-    blush_draw = ImageDraw.Draw(blush)
-    blush_draw.ellipse(box(136, 290, 204, 336), fill=BLUSH)
-    blush_draw.ellipse(box(308, 290, 376, 336), fill=BLUSH)
-    image.alpha_composite(blush)
-
-    # Глаза с бликами.
-    for cx in (204, 308):
-        draw.ellipse(box(cx - 18, 236, cx + 18, 272), fill=INK)
-        draw.ellipse(box(cx - 6, 242, cx + 5, 253), fill=WHITE)
-
-    # Нос-морда и ноздри.
-    draw.ellipse(box(172, 306, 340, 414), fill=PEACH, outline=INK, width=width)
-    draw.ellipse(box(222, 338, 246, 362), fill=INK)
-    draw.ellipse(box(266, 338, 290, 362), fill=INK)
-    draw.arc(box(232, 352, 280, 392), start=20, end=160, fill=INK, width=px(5))
-
-    # Хохолок.
-    draw.arc(box(236, 86, 276, 126), start=200, end=340, fill=INK, width=px(6))
-    draw.arc(box(252, 80, 292, 120), start=200, end=340, fill=INK, width=px(6))
-
-    return image.resize((size, size), Image.LANCZOS)
+    # Иконка использует ту же корову, что и карточки в приложении: так
+    # магазин и игра выглядят единым целым.
+    image = Image.new("RGBA", (size, size), SUNNY)
+    cow_path = os.path.join(
+        ROOT, "app", "src", "main", "assets", "images", "cow_512.png"
+    )
+    art = Image.open(cow_path).convert("RGBA")
+    target = int(size * 0.94)
+    art.thumbnail((target, target), Image.LANCZOS)
+    image.alpha_composite(
+        art,
+        ((size - art.width) // 2, (size - art.height) // 2 + int(size * 0.015)),
+    )
+    return image
 
 
 def draw_feature(width: int = 1024, height: int = 500) -> Image.Image:

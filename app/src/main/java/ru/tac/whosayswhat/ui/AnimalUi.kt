@@ -116,6 +116,16 @@ fun animalEmoji(id: String): String = when (id) {
     "duck" -> "🦆"
     "horse" -> "🐴"
     "rooster" -> "🐓"
+    "sheep" -> "🐑"
+    "pig" -> "🐷"
+    "goat" -> "🐐"
+    "frog" -> "🐸"
+    "goose" -> "🦢"
+    "donkey" -> "🐴"
+    "owl" -> "🦉"
+    "mouse" -> "🐭"
+    "bee" -> "🐝"
+    "turkey" -> "🦃"
     else -> "🐾"
 }
 

@@ -3,7 +3,7 @@ package ru.tac.whosayswhat.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -60,31 +60,23 @@ fun SandboxScreen(
                 // чтобы он не перекрывал карточку животного.
                 .padding(start = 16.dp, end = 16.dp, top = 56.dp, bottom = 12.dp),
         ) {
-            BoxWithConstraints(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                val rowGap = 16.dp
-                val rows = (animals.size + 1) / 2
-                val cellHeight = if (rows > 0) {
-                    ((maxHeight - rowGap * (rows - 1)) / rows).coerceAtLeast(96.dp)
-                } else {
-                    120.dp
-                }
-
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(rowGap),
-                    modifier = Modifier.fillMaxSize(),
-                ) {
-                    items(animals, key = { it.id }) { animal ->
-                        AnimalCard(
-                            animal = animal,
-                            onClick = {
-                                lastAnimal = animal
-                                onAnimalSound(animal)
-                            },
-                            modifier = Modifier.fillMaxWidth().height(cellHeight),
-                        )
-                    }
+            // На телефоне — две колонки, на планшете — больше: карточки
+            // остаются крупными, а 16 животных просто прокручиваются.
+            LazyVerticalGrid(
+                columns = GridCells.Adaptive(minSize = 180.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+            ) {
+                items(animals, key = { it.id }) { animal ->
+                    AnimalCard(
+                        animal = animal,
+                        onClick = {
+                            lastAnimal = animal
+                            onAnimalSound(animal)
+                        },
+                        modifier = Modifier.fillMaxWidth().aspectRatio(1f),
+                    )
                 }
             }
 

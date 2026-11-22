@@ -80,6 +80,44 @@ private val SOUND_CREDITS = """
     Петух — alys, общественное достояние
     commons.wikimedia.org/wiki/File:Medium_rooster_crowing.ogg
 
+    Овца — earthcalling, общественное достояние
+    commons.wikimedia.org/wiki/File:Sheep_bleating.ogg
+
+    Свинья — erdie, CC BY 3.0
+    commons.wikimedia.org/wiki/File:Pig_grunt_-_Erdie.ogg
+    creativecommons.org/licenses/by/3.0
+
+    Коза — stephan, общественное достояние
+    commons.wikimedia.org/wiki/File:Herd_of_goats_bleating.ogg
+
+    Лягушка — MichaeltheFox8621, CC BY-SA 4.0
+    commons.wikimedia.org/wiki/File:Single_Frog_Croak.oga
+    creativecommons.org/licenses/by-sa/4.0
+
+    Гусь — Grégoire Chauvot, CC0 1.0
+    commons.wikimedia.org/wiki/File:Red-breasted_Goose_call_(Branta_ruficollis).ogg
+    creativecommons.org/publicdomain/zero/1.0
+
+    Осёл — felix-blume, CC0 1.0
+    commons.wikimedia.org/wiki/File:157763_felix-blume_a-donkey-is-braying-in-his-enclosure-in-south-of-france.wav
+    creativecommons.org/publicdomain/zero/1.0
+
+    Сова — Vianney Bajart, CC BY-SA 4.0
+    commons.wikimedia.org/wiki/File:Strix_aluco_male.oga
+    creativecommons.org/licenses/by-sa/4.0
+
+    Мышка — shyguy014, CC0 1.0
+    freesound.org/people/shyguy014/sounds/463789
+    creativecommons.org/publicdomain/zero/1.0
+
+    Пчела — Serg Childed, CC BY-SA 4.0
+    commons.wikimedia.org/wiki/File:Buzzing_bees.ogg
+    creativecommons.org/licenses/by-sa/4.0
+
+    Индюк — Jonathon Jongsma, CC BY-SA 3.0
+    commons.wikimedia.org/wiki/File:Meleagris_gallopavo_-_Wild_Turkey_XC136045.ogg
+    creativecommons.org/licenses/by-sa/3.0
+
     Записи перекодированы в моно 44,1 кГц, обрезаны и нормализованы.
     Полные условия лицензий: creativecommons.org/licenses
 """.trimIndent()

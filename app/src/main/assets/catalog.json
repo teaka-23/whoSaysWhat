@@ -1,5 +1,5 @@
 {
-  "version": "0.1.0",
+  "version": "0.2.0",
   "animals": [
     {
       "id": "cow",
@@ -59,6 +59,106 @@
       "onomatopoeia_text": "Ку-ка-ре-ку!",
       "simple_onomatopoeia": "Ку-ка",
       "hint_detail": "красный гребешок, хвост веером",
+      "level": 1
+    },
+    {
+      "id": "sheep",
+      "name": "Овца",
+      "image": "images/sheep_512.png",
+      "sound_file": "sounds/sheep_real.wav",
+      "onomatopoeia_text": "Бе-е-е!",
+      "simple_onomatopoeia": "Бе",
+      "hint_detail": "кудрявая шерсть, висячие ушки",
+      "level": 1
+    },
+    {
+      "id": "pig",
+      "name": "Свинья",
+      "image": "images/pig_512.png",
+      "sound_file": "sounds/pig_real.wav",
+      "onomatopoeia_text": "Хрю-хрю!",
+      "simple_onomatopoeia": "Хрю",
+      "hint_detail": "пятачок, хвостик-крючок",
+      "level": 1
+    },
+    {
+      "id": "goat",
+      "name": "Коза",
+      "image": "images/goat_512.png",
+      "sound_file": "sounds/goat_real.wav",
+      "onomatopoeia_text": "Ме-е-е!",
+      "simple_onomatopoeia": "Ме",
+      "hint_detail": "рожки, бородка, длинные уши",
+      "level": 1
+    },
+    {
+      "id": "frog",
+      "name": "Лягушка",
+      "image": "images/frog_512.png",
+      "sound_file": "sounds/frog_real.wav",
+      "onomatopoeia_text": "Ква-ква!",
+      "simple_onomatopoeia": "Ква",
+      "hint_detail": "большие глаза, широкий рот, зелёная кожа",
+      "level": 1
+    },
+    {
+      "id": "goose",
+      "name": "Гусь",
+      "image": "images/goose_512.png",
+      "sound_file": "sounds/goose_real.wav",
+      "onomatopoeia_text": "Га-га-га!",
+      "simple_onomatopoeia": "Га",
+      "hint_detail": "длинная шея, оранжевый клюв",
+      "level": 1
+    },
+    {
+      "id": "donkey",
+      "name": "Осёл",
+      "image": "images/donkey_512.png",
+      "sound_file": "sounds/donkey_real.wav",
+      "onomatopoeia_text": "Иа-иа!",
+      "simple_onomatopoeia": "Иа",
+      "hint_detail": "длинные уши, серая шерсть",
+      "level": 1
+    },
+    {
+      "id": "owl",
+      "name": "Сова",
+      "image": "images/owl_512.png",
+      "sound_file": "sounds/owl_real.wav",
+      "onomatopoeia_text": "Ух-ух!",
+      "simple_onomatopoeia": "Ух",
+      "hint_detail": "большие жёлтые глаза, кисточки на ушах",
+      "level": 1
+    },
+    {
+      "id": "mouse",
+      "name": "Мышка",
+      "image": "images/mouse_512.png",
+      "sound_file": "sounds/mouse_real.wav",
+      "onomatopoeia_text": "Пи-пи!",
+      "simple_onomatopoeia": "Пи",
+      "hint_detail": "круглые ушки, длинный хвостик",
+      "level": 1
+    },
+    {
+      "id": "bee",
+      "name": "Пчела",
+      "image": "images/bee_512.png",
+      "sound_file": "sounds/bee_real.wav",
+      "onomatopoeia_text": "Ж-ж-ж!",
+      "simple_onomatopoeia": "Ж-ж",
+      "hint_detail": "полоски, прозрачные крылья",
+      "level": 1
+    },
+    {
+      "id": "turkey",
+      "name": "Индюк",
+      "image": "images/turkey_512.png",
+      "sound_file": "sounds/turkey_real.wav",
+      "onomatopoeia_text": "Бал-бал!",
+      "simple_onomatopoeia": "Бал",
+      "hint_detail": "хвост веером, красная серёжка",
       "level": 1
     }
   ]
