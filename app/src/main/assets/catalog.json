@@ -1,0 +1,65 @@
+{
+  "version": "0.1.0",
+  "animals": [
+    {
+      "id": "cow",
+      "name": "Корова",
+      "image": "images/cow_512.png",
+      "sound_file": "sounds/cow_real.wav",
+      "onomatopoeia_text": "Му-у-у!",
+      "simple_onomatopoeia": "Му",
+      "hint_detail": "пятна, ресницы, уши торчком",
+      "level": 1
+    },
+    {
+      "id": "cat",
+      "name": "Кошка",
+      "image": "images/cat_512.png",
+      "sound_file": "sounds/cat_real.wav",
+      "onomatopoeia_text": "Мяу!",
+      "simple_onomatopoeia": "Мяу",
+      "hint_detail": "усы, треугольные ушки, закрученный хвост",
+      "level": 1
+    },
+    {
+      "id": "dog",
+      "name": "Собака",
+      "image": "images/dog_512.png",
+      "sound_file": "sounds/dog_real.wav",
+      "onomatopoeia_text": "Гав-гав!",
+      "simple_onomatopoeia": "Ав",
+      "hint_detail": "висячие уши, тёмный нос",
+      "level": 1
+    },
+    {
+      "id": "duck",
+      "name": "Утка",
+      "image": "images/duck_512.png",
+      "sound_file": "sounds/duck_real.wav",
+      "onomatopoeia_text": "Кря-кря!",
+      "simple_onomatopoeia": "Кря",
+      "hint_detail": "оранжевый клюв, перья на шее волнами",
+      "level": 1
+    },
+    {
+      "id": "horse",
+      "name": "Лошадь",
+      "image": "images/horse_512.png",
+      "sound_file": "sounds/horse_real.wav",
+      "onomatopoeia_text": "И-го-го!",
+      "simple_onomatopoeia": "Цок-цок",
+      "hint_detail": "длинная грива, вытянутая морда",
+      "level": 1
+    },
+    {
+      "id": "rooster",
+      "name": "Петух",
+      "image": "images/rooster_512.png",
+      "sound_file": "sounds/rooster_real.wav",
+      "onomatopoeia_text": "Ку-ка-ре-ку!",
+      "simple_onomatopoeia": "Ку-ка",
+      "hint_detail": "красный гребешок, хвост веером",
+      "level": 1
+    }
+  ]
+}

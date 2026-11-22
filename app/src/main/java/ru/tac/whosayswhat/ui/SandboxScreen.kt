@@ -1,0 +1,130 @@
+package ru.tac.whosayswhat.ui
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import ru.tac.whosayswhat.data.Animal
+import ru.tac.whosayswhat.ui.theme.Cream
+import ru.tac.whosayswhat.ui.theme.Ink
+import ru.tac.whosayswhat.ui.theme.Peach
+import ru.tac.whosayswhat.ui.theme.Sunny
+
+/**
+ * Песочница: ребёнок сам нажимает на животных и слышит звуки.
+ * Никакого текста для ребёнка; кнопка «Играть» — для взрослого/старшего.
+ */
+@Composable
+fun SandboxScreen(
+    animals: List<Animal>,
+    echoEnabled: Boolean,
+    onAnimalSound: (Animal) -> Unit,
+    onStartGame: () -> Unit,
+    onEcho: (Animal) -> Unit,
+    onOpenParentPanel: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var lastAnimal by remember { mutableStateOf<Animal?>(null) }
+
+    Box(modifier = modifier.fillMaxSize().background(Cream)) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                // Сверху оставляем место для замка родительской панели,
+                // чтобы он не перекрывал карточку животного.
+                .padding(start = 16.dp, end = 16.dp, top = 56.dp, bottom = 12.dp),
+        ) {
+            BoxWithConstraints(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                val rowGap = 16.dp
+                val rows = (animals.size + 1) / 2
+                val cellHeight = if (rows > 0) {
+                    ((maxHeight - rowGap * (rows - 1)) / rows).coerceAtLeast(96.dp)
+                } else {
+                    120.dp
+                }
+
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(rowGap),
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    items(animals, key = { it.id }) { animal ->
+                        AnimalCard(
+                            animal = animal,
+                            onClick = {
+                                lastAnimal = animal
+                                onAnimalSound(animal)
+                            },
+                            modifier = Modifier.fillMaxWidth().height(cellHeight),
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Button(
+                    onClick = onStartGame,
+                    modifier = Modifier.weight(1f).height(72.dp),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Sunny,
+                        contentColor = Ink,
+                    ),
+                ) {
+                    Text(text = "Играть", fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                }
+                if (echoEnabled) {
+                    Button(
+                        onClick = { (lastAnimal ?: animals.firstOrNull())?.let(onEcho) },
+                        modifier = Modifier.size(72.dp),
+                        shape = RoundedCornerShape(24.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Peach,
+                            contentColor = Ink,
+                        ),
+                        contentPadding = PaddingValues(0.dp),
+                    ) {
+                        Text(text = "🎤", fontSize = 30.sp)
+                    }
+                }
+            }
+        }
+
+        ParentGateButton(
+            onOpen = onOpenParentPanel,
+            modifier = Modifier.align(Alignment.TopEnd).padding(4.dp),
+        )
+    }
+}

@@ -1,0 +1,27 @@
+# Gradle
+.gradle/
+build/
+app/build/
+
+# Android
+local.properties
+captures/
+.externalNativeBuild/
+.cxx/
+nohup.out
+
+# Signing — никогда не коммитить
+keystore.properties
+*.jks
+*.keystore
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+
+# GitHub Pages build output
+_site/
