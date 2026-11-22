@@ -88,13 +88,13 @@ receiver'ов — оно не показывается пользователю 
   и `bundleRelease` проходят; звуки и диалог лицензий проверены на эмуляторе
   Android 15.
 
+- [x] **Публикация политики.** Репозиторий `teaka-23/whoSaysWhat` создан,
+  GitHub Pages включён (Source: GitHub Actions), workflow выполнен успешно.
+  Страница доступна:
+  https://teaka-23.github.io/whoSaysWhat/privacy-policy.html
+
 Осталось:
 
-- [ ] Инициализировать git-репозиторий, запушить в `teaka-23/whoSaysWhat` и
-  включить GitHub Pages (Settings → Pages → Source: GitHub Actions). После
-  публикации проверить
-  https://teaka-23.github.io/whoSaysWhat/privacy-policy.html и указать этот
-  URL в карточке RuStore.
 - [ ] Проверить на Android 8.0, телефоне с 2 ГБ RAM и планшете 10″; проверить
   запись и отзыв разрешения микрофона.
 - [ ] Загрузить `app/build/outputs/bundle/release/app-release.aab` в RuStore

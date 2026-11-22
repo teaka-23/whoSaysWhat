@@ -58,9 +58,9 @@ private const val TAP_WINDOW_MS = 1_500L
  * родителей. Полные тексты лицензий лежат в assets/licenses/animal-sounds.md.
  */
 private val SOUND_CREDITS = """
-    Корова — MichaeltheFox8621, CC BY-SA 4.0
-    commons.wikimedia.org/wiki/File:Single_Cow_Moo.ogg
-    creativecommons.org/licenses/by-sa/4.0
+    Корова — Secretlondon, CC BY-SA 3.0
+    commons.wikimedia.org/wiki/File:Mudchute_cow_1.ogg
+    creativecommons.org/licenses/by-sa/3.0
 
     Кошка — freemaster2, CC0 1.0
     commons.wikimedia.org/wiki/File:Meow_of_a_Siamese_cat_-_freemaster2.wav

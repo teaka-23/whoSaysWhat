@@ -2,7 +2,7 @@
 
 Шесть записей взяты с Wikimedia Commons и входят в APK. В приложении эта
 информация доступна в панели «Для родителей» → «Звуки животных: лицензии».
-Перед публикацией сохраните этот файл в APK и в репозитории.
+Файл входит в APK и опубликован в репозитории.
 
 Все аудиофайлы перекодированы в моно 44,1 кГц PCM WAV, обрезаны до коротких
 фрагментов, снабжены короткими фейдами и нормализованы по пику. Эти изменения
@@ -12,9 +12,9 @@
 ## Корова
 
 - **Файл в приложении:** `sounds/cow_real.wav`
-- **Оригинал:** [Single Cow Moo.ogg](https://commons.wikimedia.org/wiki/File:Single_Cow_Moo.ogg)
-- **Автор:** MichaeltheFox8621
-- **Лицензия:** [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)
+- **Оригинал:** [Mudchute cow 1.ogg](https://commons.wikimedia.org/wiki/File:Mudchute_cow_1.ogg)
+- **Автор:** Secretlondon
+- **Лицензия:** [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/)
 - **Изменения:** обрезано начало/конец, моно, нормализация.
 
 ## Кошка
