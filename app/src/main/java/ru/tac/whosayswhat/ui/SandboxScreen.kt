@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -27,6 +28,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -52,7 +55,7 @@ fun SandboxScreen(
 ) {
     var lastAnimal by remember { mutableStateOf<Animal?>(null) }
 
-    Box(modifier = modifier.fillMaxSize().background(Cream)) {
+    Box(modifier = modifier.fillMaxSize().background(Cream).safeDrawingPadding()) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -62,8 +65,10 @@ fun SandboxScreen(
         ) {
             // На телефоне — две колонки, на планшете — больше: карточки
             // остаются крупными, а 16 животных просто прокручиваются.
+            // 150dp — порог, при котором две колонки помещаются даже на
+            // бюджетном телефоне шириной 360dp.
             LazyVerticalGrid(
-                columns = GridCells.Adaptive(minSize = 180.dp),
+                columns = GridCells.Adaptive(minSize = 150.dp),
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 modifier = Modifier.weight(1f).fillMaxWidth(),
@@ -98,9 +103,18 @@ fun SandboxScreen(
                     Text(text = "Играть", fontSize = 28.sp, fontWeight = FontWeight.Bold)
                 }
                 if (echoEnabled) {
+                    val echoAnimal = lastAnimal ?: animals.firstOrNull()
                     Button(
-                        onClick = { (lastAnimal ?: animals.firstOrNull())?.let(onEcho) },
-                        modifier = Modifier.size(72.dp),
+                        onClick = { echoAnimal?.let(onEcho) },
+                        modifier = Modifier
+                            .size(72.dp)
+                            .semantics {
+                                contentDescription = if (echoAnimal != null) {
+                                    "Эхо: повторить звук ${echoAnimal.name}"
+                                } else {
+                                    "Эхо"
+                                }
+                            },
                         shape = RoundedCornerShape(24.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Peach,
@@ -108,7 +122,14 @@ fun SandboxScreen(
                         ),
                         contentPadding = PaddingValues(0.dp),
                     ) {
-                        Text(text = "🎤", fontSize = 30.sp)
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(text = "🎤", fontSize = 24.sp)
+                            Text(
+                                text = "Эхо",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
                     }
                 }
             }

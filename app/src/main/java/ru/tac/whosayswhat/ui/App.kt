@@ -67,8 +67,17 @@ fun App(
         )
     }
 
-    BackHandler(enabled = !parentPanel) { parentPanel = true }
-    BackHandler(enabled = parentPanel) { parentPanel = false }
+    // Back ведёт себя предсказуемо: закрывает диалог/панель, возвращает
+    // из игры в песочницу. Только на главном экране открывает панель
+    // родителей — приложение не закрывается случайным нажатием ребёнка.
+    BackHandler {
+        when {
+            echoAnimal != null -> echoAnimal = null
+            parentPanel -> parentPanel = false
+            screen != Screen.Sandbox -> screen = Screen.Sandbox
+            else -> parentPanel = true
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize().background(Cream)) {
         val loaded = catalog
@@ -107,6 +116,7 @@ fun App(
                                 screen = Screen.Reward
                             },
                             onOpenParentPanel = { parentPanel = true },
+                            onExit = { screen = Screen.Sandbox },
                         )
                     }
 
@@ -131,6 +141,14 @@ fun App(
                 },
                 onReset = { scope.launch { progressStore.resetProgress() } },
                 onDismiss = { parentPanel = false },
+                onGoHome = if (screen != Screen.Sandbox) {
+                    {
+                        screen = Screen.Sandbox
+                        parentPanel = false
+                    }
+                } else {
+                    null
+                },
             )
         }
 

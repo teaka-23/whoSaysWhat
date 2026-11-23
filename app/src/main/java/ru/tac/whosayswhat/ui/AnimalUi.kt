@@ -3,11 +3,13 @@ package ru.tac.whosayswhat.ui
 import android.content.Context
 import android.graphics.BitmapFactory
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
@@ -27,8 +29,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -45,7 +49,11 @@ import kotlin.math.roundToInt
  * кладутся в assets/images по путям из catalog.json.
  */
 @Composable
-fun AnimalArtwork(animal: Animal, modifier: Modifier = Modifier) {
+fun AnimalArtwork(
+    animal: Animal,
+    modifier: Modifier = Modifier,
+    contentDescription: String? = animal.name,
+) {
     val context = LocalContext.current
     var image by remember(animal.image) { mutableStateOf<ImageBitmap?>(null) }
     LaunchedEffect(animal.image) {
@@ -57,7 +65,7 @@ fun AnimalArtwork(animal: Animal, modifier: Modifier = Modifier) {
         if (bitmap != null) {
             Image(
                 bitmap = bitmap,
-                contentDescription = animal.name,
+                contentDescription = contentDescription,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Fit,
             )
@@ -78,9 +86,16 @@ fun AnimalCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     shakeKey: Int = 0,
+    onClickLabel: String = "Послушать ${animal.name}",
 ) {
     val shake = remember { Animatable(0f) }
     val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(
+        targetValue = if (pressed) 0.96f else 1f,
+        animationSpec = tween(durationMillis = 90),
+        label = "animalCardPressScale",
+    )
 
     LaunchedEffect(shakeKey) {
         if (shakeKey > 0) {
@@ -91,7 +106,12 @@ fun AnimalCard(
     }
 
     Card(
-        modifier = modifier.offset { IntOffset(shake.value.roundToInt(), 0) },
+        modifier = modifier
+            .graphicsLayer {
+                scaleX = pressScale
+                scaleY = pressScale
+            }
+            .offset { IntOffset(shake.value.roundToInt(), 0) },
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
@@ -100,11 +120,23 @@ fun AnimalCard(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .clickable(interactionSource = interaction, indication = null, onClick = onClick)
+                .clickable(
+                    interactionSource = interaction,
+                    indication = null,
+                    role = Role.Button,
+                    onClickLabel = onClickLabel,
+                    onClick = onClick,
+                )
                 .padding(12.dp),
             contentAlignment = Alignment.Center,
         ) {
-            AnimalArtwork(animal = animal, modifier = Modifier.fillMaxSize())
+            AnimalArtwork(
+                animal = animal,
+                modifier = Modifier.fillMaxSize(),
+                // Карточка уже озвучивается через onClickLabel; отдельный
+                // образ не должен становиться второй остановкой TalkBack.
+                contentDescription = null,
+            )
         }
     }
 }

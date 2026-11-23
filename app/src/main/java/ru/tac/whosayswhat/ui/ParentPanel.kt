@@ -18,9 +18,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -43,6 +46,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -140,7 +144,10 @@ fun ParentGateButton(onOpen: () -> Unit, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .size(56.dp)
-            .clickable {
+            .clickable(
+                role = Role.Button,
+                onClickLabel = "Открыть экран для родителей",
+            ) {
                 val now = System.currentTimeMillis()
                 taps.removeAll { now - it > TAP_WINDOW_MS }
                 taps.add(now)
@@ -170,6 +177,7 @@ fun ParentPanel(
     onEchoEnabledChange: (Boolean) -> Unit,
     onReset: () -> Unit,
     onDismiss: () -> Unit,
+    onGoHome: (() -> Unit)? = null,
 ) {
     var confirmReset by remember { mutableStateOf(false) }
     var showSoundLicenses by remember { mutableStateOf(false) }
@@ -179,7 +187,9 @@ fun ParentPanel(
         Column(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
             Row(
                 modifier = Modifier
+                    .widthIn(max = 760.dp)
                     .fillMaxWidth()
+                    .align(Alignment.CenterHorizontally)
                     .padding(start = 20.dp, end = 12.dp, top = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -196,7 +206,11 @@ fun ParentPanel(
             }
 
             LazyColumn(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .widthIn(max = 760.dp)
+                    .fillMaxWidth()
+                    .align(Alignment.CenterHorizontally),
                 contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
@@ -204,25 +218,19 @@ fun ParentPanel(
                     SummaryCard(animals = animals, progress = progress, sessions = sessions)
                 }
 
-                item { SectionTitle("Прогресс по животным") }
-
-                if (animals.isEmpty()) {
+                if (onGoHome != null) {
                     item {
-                        Text(
-                            text = "Каталог ещё загружается…",
-                            fontSize = 15.sp,
-                            color = Ink.copy(alpha = 0.6f),
-                        )
+                        TextButton(
+                            onClick = onGoHome,
+                            contentPadding = PaddingValues(horizontal = 4.dp),
+                        ) {
+                            Text(text = "← Домой", fontSize = 15.sp)
+                        }
                     }
                 }
 
-                items(animals, key = { it.id }) { animal ->
-                    AnimalProgressRow(
-                        animal = animal,
-                        progress = progress[animal.id] ?: AnimalProgress.EMPTY,
-                    )
-                }
-
+                // Настройки — выше длинного списка животных: родитель обычно
+                // открывает панель именно для «Эхо» или смены сложности.
                 item { SectionTitle("Настройки игры") }
 
                 item { LevelCard(level = level, onLevelChange = onLevelChange) }
@@ -250,6 +258,25 @@ fun ParentPanel(
                     }
                 }
 
+                item { SectionTitle("Прогресс по животным") }
+
+                if (animals.isEmpty()) {
+                    item {
+                        Text(
+                            text = "Каталог ещё загружается…",
+                            fontSize = 15.sp,
+                            color = Ink.copy(alpha = 0.7f),
+                        )
+                    }
+                }
+
+                items(animals, key = { it.id }) { animal ->
+                    AnimalProgressRow(
+                        animal = animal,
+                        progress = progress[animal.id] ?: AnimalProgress.EMPTY,
+                    )
+                }
+
                 item {
                     TextButton(
                         onClick = { confirmReset = true },
@@ -266,7 +293,7 @@ fun ParentPanel(
                         text = "Прогресс хранится только на этом устройстве. " +
                             "Без аккаунта, рекламы и аналитики.",
                         fontSize = 12.sp,
-                        color = Ink.copy(alpha = 0.5f),
+                        color = Ink.copy(alpha = 0.7f),
                     )
                 }
             }
@@ -368,7 +395,7 @@ private fun SummaryValue(value: String, label: String) {
         Text(
             text = label,
             fontSize = 13.sp,
-            color = Ink.copy(alpha = 0.55f),
+            color = Ink.copy(alpha = 0.7f),
         )
     }
 }
@@ -380,7 +407,7 @@ private fun SectionTitle(text: String) {
         modifier = Modifier.padding(top = 6.dp),
         fontSize = 15.sp,
         fontWeight = FontWeight.Bold,
-        color = Ink.copy(alpha = 0.65f),
+        color = Ink.copy(alpha = 0.7f),
     )
 }
 
@@ -400,7 +427,11 @@ private fun AnimalProgressRow(animal: Animal, progress: AnimalProgress) {
             modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            AnimalArtwork(animal = animal, modifier = Modifier.size(40.dp))
+            AnimalArtwork(
+                animal = animal,
+                modifier = Modifier.size(40.dp),
+                contentDescription = null,
+            )
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -412,7 +443,7 @@ private fun AnimalProgressRow(animal: Animal, progress: AnimalProgress) {
                 Text(
                     text = subtitle,
                     fontSize = 12.sp,
-                    color = Ink.copy(alpha = 0.55f),
+                    color = Ink.copy(alpha = 0.7f),
                 )
             }
             StarRow(stars = progress.stars)
@@ -439,7 +470,11 @@ private fun LevelCard(level: Int, onLevelChange: (Int) -> Unit) {
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
     ) {
-        Column(modifier = Modifier.padding(vertical = 8.dp)) {
+        Column(
+            modifier = Modifier
+                .padding(vertical = 8.dp)
+                .selectableGroup(),
+        ) {
             Text(
                 text = "Сколько карточек показывать",
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
@@ -455,13 +490,19 @@ private fun LevelCard(level: Int, onLevelChange: (Int) -> Unit) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { onLevelChange(value) }
+                        .selectable(
+                            selected = level == value,
+                            role = Role.RadioButton,
+                            onClick = { onLevelChange(value) },
+                        )
                         .padding(horizontal = 8.dp, vertical = 2.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     RadioButton(
                         selected = level == value,
-                        onClick = { onLevelChange(value) },
+                        // Клик обрабатывает вся строка: зона нажатия больше,
+                        // а TalkBack читает её как один переключатель.
+                        onClick = null,
                     )
                     Text(text = label, fontSize = 16.sp, color = Ink)
                 }
@@ -473,6 +514,7 @@ private fun LevelCard(level: Int, onLevelChange: (Int) -> Unit) {
 @Composable
 private fun PrivacyCard() {
     Card(
+        modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
     ) {
@@ -523,7 +565,7 @@ private fun PrivacyRow(title: String, text: String, accent: Color) {
             Text(
                 text = text,
                 fontSize = 12.sp,
-                color = Ink.copy(alpha = 0.55f),
+                color = Ink.copy(alpha = 0.7f),
             )
         }
     }
@@ -558,12 +600,13 @@ private fun EchoCard(echoEnabled: Boolean, onEchoEnabledChange: (Boolean) -> Uni
                 Text(
                     text = if (echoEnabled) {
                         "Ребёнок повторяет звук в микрофон и слышит себя. " +
+                            "При первой записи — объяснение и запрос разрешения. " +
                             "Запись не покидает устройство."
                     } else {
                         "Выключен — микрофон не используется."
                     },
                     fontSize = 12.sp,
-                    color = Ink.copy(alpha = 0.55f),
+                    color = Ink.copy(alpha = 0.7f),
                 )
             }
             Spacer(modifier = Modifier.width(8.dp))

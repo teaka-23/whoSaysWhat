@@ -17,10 +17,14 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Surface
@@ -38,7 +42,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -80,11 +87,15 @@ fun EchoDialog(
 
     var state by remember { mutableStateOf<EchoUiState>(EchoUiState.Idle) }
     var playing by remember { mutableStateOf(false) }
+    var hasPlayed by remember { mutableStateOf(false) }
     var remainingMs by remember { mutableLongStateOf(ECHO_MAX_DURATION_MS) }
     var message by remember { mutableStateOf<String?>(null) }
 
     var permissionGranted by remember { mutableStateOf(context.hasRecordAudioPermission()) }
     var showPermissionIntro by remember { mutableStateOf(!permissionGranted) }
+    // На невысоких телефонах уменьшаем иллюстрацию, чтобы кнопки
+    // «Разрешить микрофон» и «Только слушать» помещались без прокрутки.
+    val compact = LocalConfiguration.current.screenHeightDp < 780
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
@@ -110,8 +121,11 @@ fun EchoDialog(
         }
         state = EchoUiState.Recorded(file)
         message = null
-        playing = recorder.play(file) { playing = false }
-        if (!playing) message = "Не удалось воспроизвести запись."
+        // Не запускаем воспроизведение автоматически: ребёнок сам решает,
+        // когда нажать «Послушать себя». Это и безопаснее для слуха, и
+        // понятнее — после «Стоп» сразу видно, что делать дальше.
+        playing = false
+        hasPlayed = false
     }
 
     fun beginRecording() {
@@ -126,12 +140,14 @@ fun EchoDialog(
             state = EchoUiState.Recording
             remainingMs = ECHO_MAX_DURATION_MS
             playing = false
+            hasPlayed = false
         } else {
             message = "Не удалось включить микрофон. Проверьте, что он не занят другим приложением."
         }
     }
 
     fun replay(file: File) {
+        hasPlayed = true
         playing = recorder.play(file) { playing = false }
         if (!playing) message = "Не удалось воспроизвести запись."
     }
@@ -159,12 +175,15 @@ fun EchoDialog(
             modifier = Modifier
                 .padding(20.dp)
                 .widthIn(max = 520.dp)
-                .fillMaxWidth(),
+                .fillMaxWidth()
+                .heightIn(max = 560.dp),
             shape = RoundedCornerShape(32.dp),
             color = Color.White,
         ) {
             Column(
-                modifier = Modifier.padding(24.dp),
+                modifier = Modifier
+                    .padding(24.dp)
+                    .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Row(
@@ -178,27 +197,68 @@ fun EchoDialog(
                         color = Ink,
                         modifier = Modifier.weight(1f),
                     )
-                    TextButton(onClick = onDismiss) {
+                    TextButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.semantics {
+                            contentDescription = "Закрыть"
+                        },
+                    ) {
                         Text(text = "✕", fontSize = 22.sp, color = Ink)
                     }
                 }
 
-                AnimalArtwork(animal = animal, modifier = Modifier.size(148.dp))
-                Text(
-                    text = animal.name,
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Ink,
-                )
-                if (animal.onomatopoeiaText.isNotBlank()) {
-                    Text(
-                        text = "«${animal.onomatopoeiaText}»",
-                        fontSize = 19.sp,
-                        color = Ink.copy(alpha = 0.65f),
+                if (showPermissionIntro) {
+                    // На экране разрешения не занимаем полэкрана картинкой:
+                    // важнее объяснение и обе кнопки — «Разрешить» и
+                    // «Только слушать».
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        AnimalArtwork(
+                            animal = animal,
+                            modifier = Modifier.size(64.dp),
+                            contentDescription = null,
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                text = animal.name,
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Ink,
+                            )
+                            if (animal.onomatopoeiaText.isNotBlank()) {
+                                Text(
+                                    text = "«${animal.onomatopoeiaText}»",
+                                    fontSize = 16.sp,
+                                    color = Ink.copy(alpha = 0.7f),
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    AnimalArtwork(
+                        animal = animal,
+                        modifier = Modifier.size(if (compact) 104.dp else 148.dp),
+                        contentDescription = null,
                     )
+                    Text(
+                        text = animal.name,
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Ink,
+                    )
+                    if (animal.onomatopoeiaText.isNotBlank()) {
+                        Text(
+                            text = "«${animal.onomatopoeiaText}»",
+                            fontSize = 19.sp,
+                            color = Ink.copy(alpha = 0.7f),
+                        )
+                    }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(if (compact) 8.dp else 16.dp))
 
                 when {
                     showPermissionIntro -> PermissionIntro(
@@ -216,6 +276,7 @@ fun EchoDialog(
 
                     state is EchoUiState.Recorded -> RecordedContent(
                         playing = playing,
+                        hasPlayed = hasPlayed,
                         onReplay = { replay((state as EchoUiState.Recorded).file) },
                         onRecordAgain = ::beginRecording,
                         onDone = onDismiss,
@@ -233,7 +294,7 @@ fun EchoDialog(
                         text = "Микрофон не разрешён — запись недоступна.",
                         modifier = Modifier.padding(top = 8.dp),
                         fontSize = 13.sp,
-                        color = Ink.copy(alpha = 0.6f),
+                        color = Ink.copy(alpha = 0.7f),
                         textAlign = TextAlign.Center,
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -262,7 +323,7 @@ fun EchoDialog(
                     text = "Запись остаётся на устройстве и удаляется при закрытии.",
                     modifier = Modifier.padding(top = 12.dp),
                     fontSize = 12.sp,
-                    color = Ink.copy(alpha = 0.5f),
+                    color = Ink.copy(alpha = 0.7f),
                     textAlign = TextAlign.Center,
                 )
             }
@@ -370,6 +431,7 @@ private fun RecordingContent(remainingMs: Long, onStop: () -> Unit) {
 @Composable
 private fun RecordedContent(
     playing: Boolean,
+    hasPlayed: Boolean,
     onReplay: () -> Unit,
     onRecordAgain: () -> Unit,
     onDone: () -> Unit,
@@ -386,7 +448,11 @@ private fun RecordedContent(
             color = Ink,
         )
         EchoButton(
-            text = if (playing) "▶ Играет…" else "▶ Послушать ещё раз",
+            text = when {
+                playing -> "▶ Играет…"
+                hasPlayed -> "▶ Послушать ещё раз"
+                else -> "▶ Послушать себя"
+            },
             containerColor = Sky,
             onClick = onReplay,
         )

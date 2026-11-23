@@ -19,8 +19,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -34,7 +37,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
@@ -43,7 +51,9 @@ import ru.tac.whosayswhat.audio.SoundPlayer
 import ru.tac.whosayswhat.game.Answer
 import ru.tac.whosayswhat.game.SessionEngine
 import ru.tac.whosayswhat.ui.theme.Cream
+import ru.tac.whosayswhat.ui.theme.Ink
 import ru.tac.whosayswhat.ui.theme.Sky
+import ru.tac.whosayswhat.ui.theme.Teal
 
 /** Сколько правильных ответов до экрана награды. */
 const val ROUNDS_PER_SESSION = 5
@@ -59,6 +69,7 @@ fun GuessScreen(
     onAnswer: (animalId: String, correct: Boolean) -> Unit,
     onSessionFinished: () -> Unit,
     onOpenParentPanel: () -> Unit,
+    onExit: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var round by remember { mutableStateOf(engine.start()) }
@@ -84,10 +95,18 @@ fun GuessScreen(
         soundPlayer.play(round.target.gameSoundFile)
     }
 
-    Box(modifier = modifier.fillMaxSize().background(Cream)) {
-        BoxWithConstraints(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+    Box(modifier = modifier.fillMaxSize().background(Cream).safeDrawingPadding()) {
+        BoxWithConstraints(
+            modifier = Modifier
+                .fillMaxSize()
+                // Верхняя строка с «Домой», прогрессом и замком не должна
+                // перекрывать круг со звуком даже на 320dp.
+                .padding(start = 16.dp, end = 16.dp, top = 64.dp, bottom = 16.dp),
+        ) {
             val gap = 16.dp
-            val promptSize = 148.dp
+            // На узких экранах круг чуть меньше, чтобы не задевать
+            // индикатор прогресса в левом верхнем углу.
+            val promptSize = minOf(148.dp, maxWidth * 0.38f)
             val promptGap = 24.dp
             val rows = (round.options.size + 1) / 2
             val cellWidth = (maxWidth - gap) / 2
@@ -121,7 +140,12 @@ fun GuessScreen(
                         .shadow(elevation = 8.dp, shape = CircleShape)
                         .clip(CircleShape)
                         .background(Sky)
-                        .clickable { soundPlayer.play(round.target.gameSoundFile) },
+                        .clickable(
+                            role = Role.Button,
+                            onClickLabel = "Повторить звук",
+                        ) {
+                            soundPlayer.play(round.target.gameSoundFile)
+                        },
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(text = "🔊", fontSize = 64.sp)
@@ -168,6 +192,7 @@ fun GuessScreen(
                                     },
                                     modifier = Modifier.weight(1f).fillMaxHeight(),
                                     shakeKey = if (wrongAnimalId == animal.id) shakeKey else 0,
+                                    onClickLabel = "Выбрать ${animal.name}",
                                 )
                             }
                             if (rowAnimals.size == 1) {
@@ -179,9 +204,66 @@ fun GuessScreen(
             }
         }
 
-        ParentGateButton(
-            onOpen = onOpenParentPanel,
-            modifier = Modifier.align(Alignment.TopEnd).padding(4.dp),
-        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.TopStart)
+                .padding(start = 16.dp, end = 4.dp, top = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .height(48.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(Color.White.copy(alpha = 0.8f))
+                    .clickable(
+                        role = Role.Button,
+                        onClickLabel = "Выйти в песочницу",
+                        onClick = onExit,
+                    )
+                    .padding(horizontal = 14.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = "← Домой",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Ink,
+                )
+            }
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            RoundProgress(solved = solved)
+
+            Spacer(modifier = Modifier.width(4.dp))
+
+            ParentGateButton(onOpen = onOpenParentPanel)
+        }
+    }
+}
+
+/** Пять точек вверху: ребёнок видит, сколько раундов уже позади. */
+@Composable
+private fun RoundProgress(solved: Int, modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier
+            .clip(RoundedCornerShape(50))
+            .background(Color.White.copy(alpha = 0.75f))
+            .padding(horizontal = 10.dp, vertical = 6.dp)
+            .semantics {
+                contentDescription = "Пройдено $solved из $ROUNDS_PER_SESSION"
+            },
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        repeat(ROUNDS_PER_SESSION) { index ->
+            Box(
+                modifier = Modifier
+                    .size(if (index < solved) 11.dp else 9.dp)
+                    .clip(CircleShape)
+                    .background(if (index < solved) Teal else Ink.copy(alpha = 0.18f)),
+            )
+        }
     }
 }

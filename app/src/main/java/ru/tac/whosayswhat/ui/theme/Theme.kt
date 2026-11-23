@@ -9,13 +9,16 @@ import androidx.compose.ui.graphics.Color
 val Cream = Color(0xFFF5F6FA)
 val Ink = Color(0xFF37474F)
 val Mint = Color(0xFF80CBC4)
+val Teal = Color(0xFF00695C)
 val Sunny = Color(0xFFFFD180)
 val Sky = Color(0xFFB3E5FC)
 val Peach = Color(0xFFFFCCBC)
 
 private val KidColorScheme = lightColorScheme(
-    primary = Mint,
-    onPrimary = Color(0xFF00332F),
+    // Тёмный бирюзовый для текстовых кнопок, переключателей и радио:
+    // светлый Mint на белом даёт слишком низкий контраст.
+    primary = Teal,
+    onPrimary = Color.White,
     secondary = Sunny,
     onSecondary = Ink,
     background = Cream,
