@@ -1,5 +1,9 @@
 package ru.tac.whosayswhat.ui
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -38,6 +42,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -51,6 +56,8 @@ import ru.tac.whosayswhat.ui.theme.Sky
 import ru.tac.whosayswhat.ui.theme.Sunny
 
 private const val TAP_WINDOW_MS = 1_500L
+private const val PRIVACY_POLICY_URL =
+    "https://teaka-23.github.io/whoSaysWhat/privacy-policy.html"
 
 /**
  * Атрибуция записей с Wikimedia Commons. Файлы входят в APK, поэтому credits
@@ -166,6 +173,7 @@ fun ParentPanel(
 ) {
     var confirmReset by remember { mutableStateOf(false) }
     var showSoundLicenses by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
     Surface(modifier = Modifier.fillMaxSize(), color = Cream) {
         Column(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
@@ -229,6 +237,12 @@ fun ParentPanel(
                 item { SectionTitle("Приватность") }
 
                 item { PrivacyCard() }
+
+                item {
+                    TextButton(onClick = { context.openPrivacyPolicy() }) {
+                        Text(text = "Политика конфиденциальности", fontSize = 15.sp)
+                    }
+                }
 
                 item {
                     TextButton(onClick = { showSoundLicenses = true }) {
@@ -513,6 +527,15 @@ private fun PrivacyRow(title: String, text: String, accent: Color) {
             )
         }
     }
+}
+
+private fun Context.openPrivacyPolicy() {
+    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(PRIVACY_POLICY_URL))
+        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    runCatching { startActivity(intent) }
+        .onFailure {
+            Toast.makeText(this, "Не удалось открыть браузер", Toast.LENGTH_SHORT).show()
+        }
 }
 
 @Composable

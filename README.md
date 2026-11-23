@@ -84,10 +84,11 @@ receiver'ов — оно не показывается пользователю 
   обновления.
 - [x] **Политика конфиденциальности.** Оператор и контакт заполнены в
   `store/privacy-policy.md` / `.html`. HTML проверен локально и публикуется
-  workflow `.github/workflows/pages.yml`.
+  workflow `.github/workflows/pages.yml`. Ссылка на политику открывается из
+  панели «Для родителей» → «Приватность».
 - [x] **Проверка сборки.** `testDebugUnitTest`, `lintDebug`, `assembleRelease`
-  и `bundleRelease` проходят; звуки и диалог лицензий проверены на эмуляторе
-  Android 15.
+  и `bundleRelease` проходят; звуки, диалог лицензий и ссылка на политику
+  проверены на эмуляторе Android 15.
 
 - [x] **Публикация политики.** Репозиторий `teaka-23/whoSaysWhat` создан,
   GitHub Pages включён (Source: GitHub Actions), workflow выполнен успешно.
