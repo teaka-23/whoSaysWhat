@@ -18,9 +18,9 @@ private val Context.progressDataStore: DataStore<Preferences> by preferencesData
 
 /**
  * Локальный прогресс: без аккаунта, без сети и без аналитики.
- * Храним статистику ответов по каждому животному, число сессий, уровень
- * и настройку режима «Эхо». Отдельного «облака» нет и быть не может —
- * в приложении нет разрешения INTERNET.
+ * Храним статистику ответов по каждому животному, число сессий, уровень,
+ * настройку режима «Эхо» и выбранное для него животное. Отдельного «облака»
+ * нет и быть не может — в приложении нет разрешения INTERNET.
  */
 class ProgressStore(private val context: Context) {
 
@@ -29,6 +29,7 @@ class ProgressStore(private val context: Context) {
         val LEVEL = intPreferencesKey("level")
         val ANIMAL_PROGRESS = stringPreferencesKey("animal_progress")
         val ECHO_ENABLED = booleanPreferencesKey("echo_enabled")
+        val ECHO_ANIMAL_ID = stringPreferencesKey("echo_animal_id")
 
         /** Ключ старой версии; нужен только чтобы вычистить его при сбросе. */
         val LEGACY_MASTERED = stringSetPreferencesKey("mastered_animals")
@@ -47,6 +48,12 @@ class ProgressStore(private val context: Context) {
 
     val echoEnabled: Flow<Boolean> =
         context.progressDataStore.data.map { it[Keys.ECHO_ENABLED] ?: false }
+
+    /** null — автоматический выбор: животное, которое ребёнок нажал последним. */
+    val echoAnimalId: Flow<String?> =
+        context.progressDataStore.data.map { prefs ->
+            prefs[Keys.ECHO_ANIMAL_ID]?.takeIf { it.isNotBlank() }
+        }
 
     /**
      * Учитывает одну попытку ответа. [animalId] — животное, которое загадали
@@ -79,7 +86,17 @@ class ProgressStore(private val context: Context) {
         context.progressDataStore.edit { prefs -> prefs[Keys.ECHO_ENABLED] = enabled }
     }
 
-    /** Сбрасывает прогресс, но оставляет настройки: уровень и режим «Эхо». */
+    suspend fun setEchoAnimalId(animalId: String?) {
+        context.progressDataStore.edit { prefs ->
+            if (animalId.isNullOrBlank()) {
+                prefs.remove(Keys.ECHO_ANIMAL_ID)
+            } else {
+                prefs[Keys.ECHO_ANIMAL_ID] = animalId
+            }
+        }
+    }
+
+    /** Сбрасывает прогресс, но оставляет настройки: уровень, «Эхо» и его цель. */
     suspend fun resetProgress() {
         context.progressDataStore.edit { prefs ->
             prefs.remove(Keys.SESSIONS)

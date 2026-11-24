@@ -34,6 +34,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ru.tac.whosayswhat.data.Animal
+import ru.tac.whosayswhat.data.EchoTarget
 import ru.tac.whosayswhat.ui.theme.Cream
 import ru.tac.whosayswhat.ui.theme.Ink
 import ru.tac.whosayswhat.ui.theme.Peach
@@ -52,6 +53,7 @@ fun SandboxScreen(
     onEcho: (Animal) -> Unit,
     onOpenParentPanel: () -> Unit,
     modifier: Modifier = Modifier,
+    preferredEchoAnimalId: String? = null,
 ) {
     var lastAnimal by remember { mutableStateOf<Animal?>(null) }
 
@@ -103,7 +105,13 @@ fun SandboxScreen(
                     Text(text = "Играть", fontSize = 28.sp, fontWeight = FontWeight.Bold)
                 }
                 if (echoEnabled) {
-                    val echoAnimal = lastAnimal ?: animals.firstOrNull()
+                    // Явный выбор родителя имеет приоритет. Если его нет,
+                    // работает привычное «последнее нажатое животное».
+                    val echoAnimal = EchoTarget.resolve(
+                        animals = animals,
+                        preferredId = preferredEchoAnimalId,
+                        lastTapped = lastAnimal,
+                    )
                     Button(
                         onClick = { echoAnimal?.let(onEcho) },
                         modifier = Modifier

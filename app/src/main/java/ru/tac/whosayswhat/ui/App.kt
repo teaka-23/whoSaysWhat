@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -15,11 +16,18 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlinx.coroutines.launch
+import ru.tac.whosayswhat.audio.EchoRecorder
 import ru.tac.whosayswhat.audio.SoundPlayer
+import ru.tac.whosayswhat.audio.scheduleRecordAudioPermissionRevocation
 import ru.tac.whosayswhat.data.Animal
 import ru.tac.whosayswhat.data.AnimalProgress
 import ru.tac.whosayswhat.data.Catalog
@@ -43,6 +51,7 @@ fun App(
     soundPlayer: SoundPlayer,
     repository: CatalogRepository,
     progressStore: ProgressStore,
+    onExitApp: () -> Unit,
 ) {
     val catalog by produceState<Catalog?>(initialValue = null) {
         value = runCatching { repository.load() }.getOrNull()
@@ -51,8 +60,49 @@ fun App(
         .collectAsState(initial = emptyMap<String, AnimalProgress>())
     val sessions by progressStore.completedSessions.collectAsState(initial = 0)
     val level by progressStore.level.collectAsState(initial = 1)
-    val echoEnabled by progressStore.echoEnabled.collectAsState(initial = false)
+    // null — настройки ещё не прочитаны. Это важно: не планируем отзыв
+    // микрофона, пока не знаем, что «Эхо» действительно выключено.
+    val echoEnabledSetting: Boolean? by progressStore.echoEnabled
+        .collectAsState(initial = null)
+    // Переключатель должен реагировать сразу, не ожидая асинхронной записи
+    // DataStore. Заодно это защищает от гонки: выключил → сразу вышел из
+    // приложения, пока настройка ещё не успела сохраниться.
+    var echoEnabledOverride by remember { mutableStateOf<Boolean?>(null) }
+    val storedEchoEnabled = echoEnabledSetting == true
+    val echoEnabled = echoEnabledOverride ?: storedEchoEnabled
+    val echoAnimalId by progressStore.echoAnimalId.collectAsState(initial = null)
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    LaunchedEffect(storedEchoEnabled, echoEnabledOverride) {
+        if (
+            echoEnabledOverride != null &&
+            echoEnabledSetting != null &&
+            echoEnabledOverride == storedEchoEnabled
+        ) {
+            echoEnabledOverride = null
+        }
+    }
+
+    val latestEchoEnabled by rememberUpdatedState(echoEnabled)
+    val latestEchoEnabledSetting by rememberUpdatedState(echoEnabledSetting)
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (
+                event == Lifecycle.Event.ON_STOP &&
+                latestEchoEnabledSetting != null &&
+                !latestEchoEnabled
+            ) {
+                // На Android 13+ разрешение отзывается асинхронно после
+                // выхода из foreground. На старых версиях функция вернёт
+                // false — там доступ отзывается через настройки.
+                context.scheduleRecordAudioPermissionRevocation()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     var screen by remember { mutableStateOf<Screen>(Screen.Sandbox) }
     var parentPanel by remember { mutableStateOf(false) }
@@ -98,6 +148,7 @@ fun App(
                     Screen.Sandbox -> SandboxScreen(
                         animals = loaded.animals,
                         echoEnabled = echoEnabled,
+                        preferredEchoAnimalId = echoAnimalId,
                         onAnimalSound = { soundPlayer.play(it.soundFile) },
                         onStartGame = { screen = Screen.Guess },
                         onEcho = { echoAnimal = it },
@@ -135,12 +186,27 @@ fun App(
                 sessions = sessions,
                 level = level,
                 echoEnabled = echoEnabled,
+                echoAnimalId = echoAnimalId,
                 onLevelChange = { newLevel -> scope.launch { progressStore.setLevel(newLevel) } },
                 onEchoEnabledChange = { enabled ->
+                    echoEnabledOverride = enabled
+                    if (!enabled) {
+                        // Закрываем возможный диалог и сразу удаляем записи,
+                        // не дожидаясь onDispose.
+                        echoAnimal = null
+                        EchoRecorder.cleanup(context)
+                    }
                     scope.launch { progressStore.setEchoEnabled(enabled) }
+                },
+                onEchoAnimalChange = { animalId ->
+                    scope.launch { progressStore.setEchoAnimalId(animalId) }
                 },
                 onReset = { scope.launch { progressStore.resetProgress() } },
                 onDismiss = { parentPanel = false },
+                onExitApp = {
+                    parentPanel = false
+                    onExitApp()
+                },
                 onGoHome = if (screen != Screen.Sandbox) {
                     {
                         screen = Screen.Sandbox

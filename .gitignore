@@ -25,3 +25,7 @@ keystore.properties
 
 # GitHub Pages build output
 _site/
+
+# Python
+__pycache__/
+*.pyc

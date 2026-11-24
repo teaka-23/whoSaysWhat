@@ -36,11 +36,15 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -50,6 +54,8 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import ru.tac.whosayswhat.audio.hasRecordAudioPermission
+import ru.tac.whosayswhat.audio.supportsRecordAudioPermissionRevocation
 import ru.tac.whosayswhat.data.Animal
 import ru.tac.whosayswhat.data.AnimalProgress
 import ru.tac.whosayswhat.ui.theme.Cream
@@ -81,9 +87,9 @@ private val SOUND_CREDITS = """
     commons.wikimedia.org/wiki/File:Barking_of_a_dog.ogg
     creativecommons.org/licenses/by-sa/3.0
 
-    Утка — Ganesh Mohan T, CC BY-SA 4.0
-    commons.wikimedia.org/wiki/File:Domestic_duck_sound_01.wav
-    creativecommons.org/licenses/by-sa/4.0
+    Утка — Jonathon Jongsma, CC BY-SA 3.0
+    commons.wikimedia.org/wiki/File:Anas_platyrhynchos_-_Mallard_-_XC62258.ogg
+    creativecommons.org/licenses/by-sa/3.0
 
     Лошадь — Hü, общественное достояние
     commons.wikimedia.org/wiki/File:Wiehern.ogg
@@ -173,15 +179,35 @@ fun ParentPanel(
     sessions: Int,
     level: Int,
     echoEnabled: Boolean,
+    echoAnimalId: String?,
     onLevelChange: (Int) -> Unit,
     onEchoEnabledChange: (Boolean) -> Unit,
+    onEchoAnimalChange: (String?) -> Unit,
     onReset: () -> Unit,
     onDismiss: () -> Unit,
+    onExitApp: () -> Unit,
     onGoHome: (() -> Unit)? = null,
 ) {
     var confirmReset by remember { mutableStateOf(false) }
+    var confirmExit by remember { mutableStateOf(false) }
+    var confirmDisableEcho by remember { mutableStateOf(false) }
+    var showEchoAnimalPicker by remember { mutableStateOf(false) }
     var showSoundLicenses by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    var micPermissionGranted by remember {
+        mutableStateOf(context.hasRecordAudioPermission())
+    }
+    val canAutoRevoke = supportsRecordAudioPermissionRevocation()
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                micPermissionGranted = context.hasRecordAudioPermission()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     Surface(modifier = Modifier.fillMaxSize(), color = Cream) {
         Column(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
@@ -200,6 +226,14 @@ fun ParentPanel(
                     color = Ink,
                     modifier = Modifier.weight(1f),
                 )
+                TextButton(
+                    onClick = { confirmExit = true },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = Color(0xFFB3261E),
+                    ),
+                ) {
+                    Text(text = "Выйти", fontSize = 16.sp)
+                }
                 TextButton(onClick = onDismiss) {
                     Text(text = "Закрыть", fontSize = 16.sp)
                 }
@@ -238,7 +272,28 @@ fun ParentPanel(
                 item {
                     EchoCard(
                         echoEnabled = echoEnabled,
-                        onEchoEnabledChange = onEchoEnabledChange,
+                        micPermissionGranted = micPermissionGranted,
+                        canAutoRevoke = canAutoRevoke,
+                        onEchoEnabledChange = { enabled ->
+                            if (!enabled && echoEnabled) {
+                                confirmDisableEcho = true
+                            } else {
+                                onEchoEnabledChange(enabled)
+                            }
+                        },
+                        onOpenSettings = { context.openAppSettings() },
+                        onRefreshPermission = {
+                            micPermissionGranted = context.hasRecordAudioPermission()
+                        },
+                    )
+                }
+
+                item {
+                    EchoTargetCard(
+                        animals = animals,
+                        echoEnabled = echoEnabled,
+                        selectedId = echoAnimalId,
+                        onPick = { showEchoAnimalPicker = true },
                     )
                 }
 
@@ -307,7 +362,7 @@ fun ParentPanel(
             text = {
                 Text(
                     "Звёзды, статистика и число сессий обнулятся. " +
-                        "Выбранный уровень и режим «Эхо» останутся.",
+                        "Выбранный уровень, режим «Эхо» и его животное останутся.",
                 )
             },
             confirmButton = {
@@ -323,6 +378,78 @@ fun ParentPanel(
                     Text("Отмена")
                 }
             },
+        )
+    }
+
+    if (confirmExit) {
+        AlertDialog(
+            onDismissRequest = { confirmExit = false },
+            title = { Text("Выйти из приложения?") },
+            text = {
+                Text(
+                    "Игра закроется. Прогресс и настройки сохранятся " +
+                        "на этом устройстве.",
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmExit = false
+                    onExitApp()
+                }) {
+                    Text(text = "Выйти", color = Color(0xFFB3261E))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmExit = false }) {
+                    Text("Отмена")
+                }
+            },
+        )
+    }
+
+    if (confirmDisableEcho) {
+        val permissionNote = when {
+            !micPermissionGranted -> ""
+            canAutoRevoke ->
+                " Доступ к микрофону будет отозван после закрытия приложения."
+            else ->
+                " Разрешение микрофона останется в системе — его можно " +
+                    "отозвать в настройках Android."
+        }
+        AlertDialog(
+            onDismissRequest = { confirmDisableEcho = false },
+            title = { Text("Выключить «Эхо»?") },
+            text = {
+                Text(
+                    "Временные записи будут удалены. Ребёнок больше не сможет " +
+                        "записывать голос.$permissionNote",
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmDisableEcho = false
+                    onEchoEnabledChange(false)
+                }) {
+                    Text("Выключить", color = Color(0xFFB3261E))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmDisableEcho = false }) {
+                    Text("Отмена")
+                }
+            },
+        )
+    }
+
+    if (showEchoAnimalPicker) {
+        EchoAnimalPickerDialog(
+            animals = animals,
+            selectedId = echoAnimalId,
+            onSelect = { animalId ->
+                onEchoAnimalChange(animalId)
+                showEchoAnimalPicker = false
+            },
+            onDismiss = { showEchoAnimalPicker = false },
         )
     }
 
@@ -581,37 +708,242 @@ private fun Context.openPrivacyPolicy() {
 }
 
 @Composable
-private fun EchoCard(echoEnabled: Boolean, onEchoEnabledChange: (Boolean) -> Unit) {
+private fun EchoCard(
+    echoEnabled: Boolean,
+    micPermissionGranted: Boolean,
+    canAutoRevoke: Boolean,
+    onEchoEnabledChange: (Boolean) -> Unit,
+    onOpenSettings: () -> Unit,
+    onRefreshPermission: () -> Unit,
+) {
     Card(
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
     ) {
+        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Режим «Эхо»",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Ink,
+                    )
+                    Text(
+                        text = if (echoEnabled) {
+                            "Ребёнок повторяет звук в микрофон и слышит себя. " +
+                                "При первой записи — объяснение и запрос разрешения. " +
+                                "Запись не покидает устройство."
+                        } else {
+                            "Выключен — микрофон не используется, " +
+                                "временные записи удалены."
+                        },
+                        fontSize = 12.sp,
+                        color = Ink.copy(alpha = 0.7f),
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Switch(checked = echoEnabled, onCheckedChange = onEchoEnabledChange)
+            }
+
+            if (!echoEnabled && micPermissionGranted) {
+                Text(
+                    text = if (canAutoRevoke) {
+                        "Доступ к микрофону будет отозван автоматически " +
+                            "после закрытия приложения (Android 13+)."
+                    } else {
+                        "Микрофон разрешён. На этой версии Android отзовите " +
+                            "доступ в настройках приложения."
+                    },
+                    modifier = Modifier.padding(top = 10.dp),
+                    fontSize = 12.sp,
+                    color = Ink.copy(alpha = 0.7f),
+                )
+                if (!canAutoRevoke) {
+                    Row {
+                        TextButton(onClick = onOpenSettings) {
+                            Text(text = "Настройки", fontSize = 14.sp)
+                        }
+                        TextButton(onClick = onRefreshPermission) {
+                            Text(text = "Проверить", fontSize = 14.sp)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun EchoTargetCard(
+    animals: List<Animal>,
+    echoEnabled: Boolean,
+    selectedId: String?,
+    onPick: () -> Unit,
+) {
+    val selected = animals.firstOrNull { it.id == selectedId }
+    val subtitle = when {
+        selected != null -> "Сейчас: ${selected.name}"
+        selectedId != null -> "Выбранное животное недоступно — авто"
+        else -> "Авто — последнее нажатое"
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+    ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+                .alpha(if (echoEnabled) 1f else 0.55f),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            if (selected != null) {
+                AnimalArtwork(
+                    animal = selected,
+                    modifier = Modifier.size(40.dp),
+                    contentDescription = null,
+                )
+            } else {
+                Box(
+                    modifier = Modifier.size(40.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = "А",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Ink,
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Режим «Эхо»",
+                    text = "Животное для «Эхо»",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Medium,
                     color = Ink,
                 )
                 Text(
-                    text = if (echoEnabled) {
-                        "Ребёнок повторяет звук в микрофон и слышит себя. " +
-                            "При первой записи — объяснение и запрос разрешения. " +
-                            "Запись не покидает устройство."
-                    } else {
-                        "Выключен — микрофон не используется."
-                    },
+                    text = subtitle,
                     fontSize = 12.sp,
                     color = Ink.copy(alpha = 0.7f),
                 )
             }
-            Spacer(modifier = Modifier.width(8.dp))
-            Switch(checked = echoEnabled, onCheckedChange = onEchoEnabledChange)
+            TextButton(
+                onClick = onPick,
+                enabled = echoEnabled && animals.isNotEmpty(),
+            ) {
+                Text(
+                    text = if (selected == null) "Выбрать" else "Изменить",
+                    fontSize = 14.sp,
+                )
+            }
         }
+    }
+}
+
+@Composable
+private fun EchoAnimalPickerDialog(
+    animals: List<Animal>,
+    selectedId: String?,
+    onSelect: (String?) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Животное для «Эхо»") },
+        text = {
+            LazyColumn(
+                modifier = Modifier.heightIn(max = 420.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                item {
+                    EchoAnimalOption(
+                        selected = selectedId == null,
+                        title = "Авто",
+                        subtitle = "последнее нажатое",
+                        onClick = { onSelect(null) },
+                    )
+                }
+                items(animals, key = { it.id }) { animal ->
+                    EchoAnimalOption(
+                        selected = selectedId == animal.id,
+                        title = animal.name,
+                        animal = animal,
+                        onClick = { onSelect(animal.id) },
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Готово")
+            }
+        },
+    )
+}
+
+@Composable
+private fun EchoAnimalOption(
+    selected: Boolean,
+    title: String,
+    subtitle: String? = null,
+    animal: Animal? = null,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .selectable(
+                selected = selected,
+                role = Role.RadioButton,
+                onClick = onClick,
+            )
+            .padding(horizontal = 4.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (animal != null) {
+            AnimalArtwork(
+                animal = animal,
+                modifier = Modifier.size(36.dp),
+                contentDescription = null,
+            )
+        } else {
+            Box(
+                modifier = Modifier.size(36.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = "А",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Ink,
+                )
+            }
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                fontSize = 16.sp,
+                color = Ink,
+            )
+            if (subtitle != null) {
+                Text(
+                    text = subtitle,
+                    fontSize = 12.sp,
+                    color = Ink.copy(alpha = 0.7f),
+                )
+            }
+        }
+        RadioButton(selected = selected, onClick = null)
     }
 }
 

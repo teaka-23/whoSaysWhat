@@ -37,10 +37,10 @@
 ## Утка
 
 - **Файл в приложении:** `sounds/duck_real.wav`
-- **Оригинал:** [Domestic duck sound 01.wav](https://commons.wikimedia.org/wiki/File:Domestic_duck_sound_01.wav)
-- **Автор:** Ganesh Mohan T
-- **Лицензия:** [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)
-- **Изменения:** выбран фрагмент 3 с, моно, нормализация.
+- **Оригинал:** [Anas platyrhynchos - Mallard - XC62258.ogg](https://commons.wikimedia.org/wiki/File:Anas_platyrhynchos_-_Mallard_-_XC62258.ogg)
+- **Автор:** Jonathon Jongsma
+- **Лицензия:** [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/)
+- **Изменения:** выбран фрагмент 1,02–2,78 с, моно, high-pass 90 Гц, нормализация.
 
 ## Лошадь
 

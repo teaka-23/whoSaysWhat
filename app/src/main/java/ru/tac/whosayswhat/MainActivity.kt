@@ -8,6 +8,7 @@ import androidx.compose.runtime.remember
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import ru.tac.whosayswhat.audio.EchoRecorder
 import ru.tac.whosayswhat.audio.SoundPlayer
 import ru.tac.whosayswhat.data.CatalogRepository
 import ru.tac.whosayswhat.data.ProgressStore
@@ -20,6 +21,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Если прошлый процесс завершился во время записи, onDispose не
+        // успел удалить файл. Подчищаем всё до показа UI.
+        EchoRecorder.cleanup(this)
 
         soundPlayer = SoundPlayer(this)
 
@@ -34,6 +39,7 @@ class MainActivity : ComponentActivity() {
                     soundPlayer = soundPlayer,
                     repository = remember { CatalogRepository(applicationContext) },
                     progressStore = remember { ProgressStore(applicationContext) },
+                    onExitApp = { finishAndRemoveTask() },
                 )
             }
         }
@@ -45,6 +51,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        EchoRecorder.cleanup(this)
         soundPlayer.release()
         super.onDestroy()
     }

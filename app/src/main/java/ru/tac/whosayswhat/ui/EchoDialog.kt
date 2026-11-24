@@ -1,11 +1,7 @@
 package ru.tac.whosayswhat.ui
 
 import android.Manifest
-import android.content.Context
-import android.content.Intent
-import android.net.Uri
 import android.os.SystemClock
-import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -74,7 +70,8 @@ private sealed interface EchoUiState {
  * Режим «Эхо»: ребёнок слушает животное, повторяет звук и сразу слышит себя.
  *
  * Микрофон запрашивается только здесь, после явного объяснения. Запись
- * остаётся в cacheDir и удаляется при закрытии диалога.
+ * остаётся в cacheDir и удаляется при закрытии диалога, а после аварийного
+ * завершения процесса — при следующем запуске приложения.
  */
 @Composable
 fun EchoDialog(
@@ -107,7 +104,12 @@ fun EchoDialog(
     }
 
     DisposableEffect(Unit) {
-        onDispose { recorder.release() }
+        onDispose {
+            recorder.release()
+            // release() удаляет текущую запись, а cleanup() подчищает всё,
+            // что могло остаться от предыдущих аварийных завершений.
+            EchoRecorder.cleanup(context)
+        }
     }
 
     fun finishRecording() {
@@ -320,7 +322,9 @@ fun EchoDialog(
                 }
 
                 Text(
-                    text = "Запись остаётся на устройстве и удаляется при закрытии.",
+                    text = "Запись остаётся на устройстве и удаляется при закрытии. " +
+                        "При аварийном завершении временные файлы очищаются " +
+                        "при следующем запуске.",
                     modifier = Modifier.padding(top = 12.dp),
                     fontSize = 12.sp,
                     color = Ink.copy(alpha = 0.7f),
@@ -476,12 +480,4 @@ private fun EchoButton(text: String, containerColor: Color, onClick: () -> Unit)
     ) {
         Text(text = text, fontSize = 17.sp, fontWeight = FontWeight.Bold)
     }
-}
-
-private fun Context.openAppSettings() {
-    val intent = Intent(
-        Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-        Uri.fromParts("package", packageName, null),
-    ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    runCatching { startActivity(intent) }
 }

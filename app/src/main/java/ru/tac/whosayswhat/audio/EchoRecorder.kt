@@ -26,8 +26,9 @@ fun Context.hasRecordAudioPermission(): Boolean =
  * Запись короткого «эха» ребёнка и воспроизведение её обратно.
  *
  * Файл создаётся только в cacheDir, никуда не отправляется и удаляется при
- * закрытии диалога. Приложение не имеет разрешения INTERNET, поэтому отправка
- * записи технически невозможна.
+ * закрытии диалога. Если процесс завершился аварийно, [cleanup] удалит
+ * оставшиеся файлы при следующем запуске. Приложение не имеет разрешения
+ * INTERNET, поэтому отправка записи технически невозможна.
  */
 class EchoRecorder(context: Context) {
 
@@ -51,7 +52,9 @@ class EchoRecorder(context: Context) {
         outputFile = null
 
         val dir = echoDir()
-        pruneOldRecordings(dir)
+        // На старте записи в папке не должно быть чужих/старых файлов:
+        // после аварийного завершения процесса они могли остаться.
+        EchoFiles.deleteAll(dir)
         val file = File(dir, "echo_${System.currentTimeMillis()}.m4a")
         val mediaRecorder = createRecorder()
 
@@ -173,17 +176,20 @@ class EchoRecorder(context: Context) {
             MediaRecorder()
         }
 
-    private fun echoDir(): File = File(appContext.cacheDir, "echo").apply { mkdirs() }
+    private fun echoDir(): File = echoDir(appContext)
 
-    private fun pruneOldRecordings(dir: File) {
-        val cutoff = System.currentTimeMillis() - DAY_MS
-        dir.listFiles()?.forEach { file ->
-            if (file.lastModified() < cutoff) file.delete()
-        }
-    }
+    companion object {
+        /**
+         * Удаляет все временные записи. Вызывается при старте приложения и при
+         * выключении «Эхо»: [release] из onDispose не выполняется, если процесс
+         * был убит системой.
+         */
+        fun cleanup(context: Context): Int =
+            EchoFiles.deleteAll(echoDir(context.applicationContext))
 
-    private companion object {
-        const val TAG = "EchoRecorder"
-        const val DAY_MS = 24 * 60 * 60 * 1000L
+        private fun echoDir(context: Context): File =
+            File(context.cacheDir, "echo").apply { mkdirs() }
+
+        private const val TAG = "EchoRecorder"
     }
 }
