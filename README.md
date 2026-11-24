@@ -97,7 +97,8 @@ receiver'ов — оно не показывается пользователю 
   панели «Для родителей» → «Приватность».
 - [x] **Проверка сборки.** `testDebugUnitTest`, `lintDebug`, `assembleRelease`
   и `bundleRelease` проходят; звуки, диалог лицензий и ссылка на политику
-  проверены на эмуляторе Android 15.
+  проверены на эмуляторе Android 15. Там же прокликаны выход с песочницы,
+  родительский гейт и Back на каждом экране (см. «Проверка на эмуляторе»).
 
 - [x] **Публикация политики.** Репозиторий `teaka-23/whoSaysWhat` создан,
   GitHub Pages включён (Source: GitHub Actions), workflow выполнен успешно.
@@ -158,6 +159,34 @@ tools/generate_store_assets.py   # иконка и баннер RuStore
 ./gradlew testDebugUnitTest
 # отчёт: app/build/reports/tests/testDebugUnitTest/index.html
 ```
+
+## Проверка на эмуляторе
+
+Ручные сценарии и скриншоты для стора снимаются на AVD `whosayswhat`
+(Android 15, `google_apis`, x86_64). Если system image ещё не установлен:
+
+```bash
+SDK=~/Library/Android/sdk
+$SDK/cmdline-tools/latest/bin/sdkmanager "system-images;android-35;google_apis;x86_64"
+$SDK/cmdline-tools/latest/bin/avdmanager create avd -n whosayswhat \
+  -k "system-images;android-35;google_apis;x86_64"      # один раз, если AVD нет
+$SDK/emulator/emulator -avd whosayswhat -no-window -no-audio -gpu swiftshader_indirect &
+./gradlew installDebug   # или adb install -r app/build/outputs/apk/debug/app-debug.apk
+```
+
+В этом AVD выставлен `wm size 1080x1920` при плотности 420 — ровно как у
+скриншотов 16:9, поэтому координаты тапов в сценариях ниже пересчитывать не
+нужно. `-no-audio` годится для скриншотов и проверки UI: запись в «Эхо»
+работает, но звук в headless-режиме не услышать.
+
+Что прокликано вживую:
+
+- три нажатия по замку → панель «Для родителей»; короткий Back панель не
+  открывает;
+- «Выйти» на песочнице → диалог «Выйти из игры?»; «Остаться» возвращает в
+  игру, «Выйти» вызывает `finishAndRemoveTask()` (задача исчезает из недавних);
+- Back: диалог «Эхо» закрывается, награда и игра возвращаются на песочницу,
+  на песочнице не делает ничего (activity не закрывается).
 
 ## Материалы для RuStore
 
