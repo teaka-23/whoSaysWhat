@@ -153,6 +153,7 @@ fun App(
                         onStartGame = { screen = Screen.Guess },
                         onEcho = { echoAnimal = it },
                         onOpenParentPanel = { parentPanel = true },
+                        onExitApp = onExitApp,
                     )
 
                     Screen.Guess -> key(engine) {
