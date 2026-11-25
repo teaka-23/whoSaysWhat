@@ -79,9 +79,9 @@ private val SOUND_CREDITS = """
     commons.wikimedia.org/wiki/File:Mudchute_cow_1.ogg
     creativecommons.org/licenses/by-sa/3.0
 
-    Кошка — freemaster2, CC0 1.0
-    commons.wikimedia.org/wiki/File:Meow_of_a_Siamese_cat_-_freemaster2.wav
-    creativecommons.org/publicdomain/zero/1.0
+    Кошка — Dan Crosby, CC BY-SA 3.0
+    commons.wikimedia.org/wiki/File:Meow.ogg
+    creativecommons.org/licenses/by-sa/3.0
 
     Собака — Amada44, CC BY-SA 3.0
     commons.wikimedia.org/wiki/File:Barking_of_a_dog.ogg
@@ -100,9 +100,9 @@ private val SOUND_CREDITS = """
     Овца — earthcalling, общественное достояние
     commons.wikimedia.org/wiki/File:Sheep_bleating.ogg
 
-    Свинья — erdie, CC BY 3.0
-    commons.wikimedia.org/wiki/File:Pig_grunt_-_Erdie.ogg
-    creativecommons.org/licenses/by/3.0
+    Свинья — GrWolf1129, CC BY-SA 4.0
+    commons.wikimedia.org/wiki/File:Boar.Grwls(1).ogg
+    creativecommons.org/licenses/by-sa/4.0
 
     Коза — stephan, общественное достояние
     commons.wikimedia.org/wiki/File:Herd_of_goats_bleating.ogg
@@ -127,9 +127,9 @@ private val SOUND_CREDITS = """
     freesound.org/people/shyguy014/sounds/463789
     creativecommons.org/publicdomain/zero/1.0
 
-    Пчела — Serg Childed, CC BY-SA 4.0
-    commons.wikimedia.org/wiki/File:Buzzing_bees.ogg
-    creativecommons.org/licenses/by-sa/4.0
+    Пчела — YleArkisto, CC BY 3.0
+    commons.wikimedia.org/wiki/File:263673_ylearkisto_mehilainen-tarhamehilainen-parvi-bees-honeybees-a-swarm-of-bees-buzzing-among-the-flowers-apis-mellifera.wav
+    creativecommons.org/licenses/by/3.0
 
     Индюк — Jonathon Jongsma, CC BY-SA 3.0
     commons.wikimedia.org/wiki/File:Meleagris_gallopavo_-_Wild_Turkey_XC136045.ogg

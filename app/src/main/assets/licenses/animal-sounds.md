@@ -6,9 +6,11 @@
 опубликован в репозитории.
 
 Все аудиофайлы перекодированы в моно 44,1 кГц PCM WAV, обрезаны до коротких
-фрагментов, снабжены короткими фейдами и нормализованы по пику. Эти изменения
-не меняют узнаваемость записи; производные версии распространяются на тех же
-условиях, что и оригиналы.
+фрагментов, снабжены короткими фейдами и выровнены по громкости (пик не выше
+0,88). Эти изменения не меняют узнаваемость записи; производные версии
+распространяются на тех же условиях, что и оригиналы. Записи кошки, свиньи и
+пчелы пересобраны скриптом `tools/make_animal_sounds.py`: в нём указаны
+источники и точные границы фрагментов.
 
 ## Корова
 
@@ -21,10 +23,11 @@
 ## Кошка
 
 - **Файл в приложении:** `sounds/cat_real.wav`
-- **Оригинал:** [Meow of a Siamese cat - freemaster2.wav](https://commons.wikimedia.org/wiki/File:Meow_of_a_Siamese_cat_-_freemaster2.wav)
-- **Автор:** freemaster2
-- **Лицензия:** [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/)
-- **Изменения:** обрезано начало/конец, моно, нормализация.
+- **Оригинал:** [Meow.ogg](https://commons.wikimedia.org/wiki/File:Meow.ogg)
+- **Автор:** Dan Crosby (Dcrosby)
+- **Лицензия:** [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/)
+- **Изменения:** фрагмент 0–0,75 с (одно «мяу», один слог, тон
+  470 → 650 → 590 Гц), моно, фейды, выравнивание по громкости.
 
 ## Собака
 
@@ -69,10 +72,12 @@
 ## Свинья
 
 - **Файл в приложении:** `sounds/pig_real.wav`
-- **Оригинал:** [Pig grunt - Erdie.ogg](https://commons.wikimedia.org/wiki/File:Pig_grunt_-_Erdie.ogg)
-- **Автор:** erdie
-- **Лицензия:** [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/)
-- **Изменения:** короткий фрагмент, моно, нормализация.
+- **Оригинал:** [Boar.Grwls(1).ogg](https://commons.wikimedia.org/wiki/File:Boar.Grwls(1).ogg)
+- **Автор:** GrWolf1129
+- **Лицензия:** [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)
+- **Изменения:** фрагмент 14,6–16,4 с (низкое хрюканье: пик спектра ≈ 290 Гц,
+  ≈ 77 % энергии ниже 300 Гц, выше 1,2 кГц — меньше 9 %), моно, фейды,
+  выравнивание по громкости.
 
 ## Коза
 
@@ -125,10 +130,11 @@
 ## Пчела
 
 - **Файл в приложении:** `sounds/bee_real.wav`
-- **Оригинал:** [Buzzing bees.ogg](https://commons.wikimedia.org/wiki/File:Buzzing_bees.ogg)
-- **Автор:** Serg Childed
-- **Лицензия:** [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)
-- **Изменения:** выбран фрагмент 2,7 с, моно, нормализация.
+- **Оригинал:** [263673 ylearkisto mehilainen-tarhamehilainen-parvi-bees-honeybees-a-swarm-of-bees-buzzing-among-the-flowers-apis-mellifera.wav](https://commons.wikimedia.org/wiki/File:263673_ylearkisto_mehilainen-tarhamehilainen-parvi-bees-honeybees-a-swarm-of-bees-buzzing-among-the-flowers-apis-mellifera.wav)
+- **Автор:** YleArkisto
+- **Лицензия:** [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/)
+- **Изменения:** фрагмент 29,0–31,2 с (ровное жужжание роя на цветах,
+  основной тон ≈ 230 Гц, 216–241 Гц), моно, фейды, выравнивание по громкости.
 
 ## Индюк
 

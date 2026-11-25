@@ -84,7 +84,9 @@ receiver'ов — оно не показывается пользователю 
   мышка — с Freesound (CC0). Атрибуция и ссылки на лицензии — в
   `assets/licenses/animal-sounds.md`, `THIRD_PARTY_NOTICES.md` и в панели
   «Для родителей». `praise.wav` и `nudge.wav` синтезированы скриптом
-  `tools/generate_placeholder_sounds.py`. Человеческие звукоподражания
+  `tools/generate_placeholder_sounds.py`. Кошка, свинья и пчела пересобраны
+  скриптом `tools/make_animal_sounds.py` из записей Commons: в скрипте указаны
+  источники и точные границы фрагментов. Человеческие звукоподражания
   («му», «мяу») можно добавить позже отдельными файлами и полем
   `onomatopoeia_file` — код уже поддерживает такой фолбэк.
 - [x] **Подпись.** `release.keystore` и `keystore.properties` созданы
@@ -141,6 +143,7 @@ app/src/test/…/
 └── data/CatalogJsonTest.kt      # каталог, PNG 512×512 и наличие звуков
 
 tools/generate_animal_assets.py  # 16 иллюстраций
+tools/make_animal_sounds.py      # фрагменты «мяу», «хрю» и жужжания из записей Commons
 tools/generate_store_assets.py   # иконка и баннер RuStore
 ```
 
