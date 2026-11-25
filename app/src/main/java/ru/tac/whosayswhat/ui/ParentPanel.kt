@@ -135,6 +135,28 @@ private val SOUND_CREDITS = """
     commons.wikimedia.org/wiki/File:Meleagris_gallopavo_-_Wild_Turkey_XC136045.ogg
     creativecommons.org/licenses/by-sa/3.0
 
+    Курица — alys, общественное достояние
+    commons.wikimedia.org/wiki/File:Chickens_demanding_food.ogg
+
+    Волк — автор не указан, общественное достояние
+    commons.wikimedia.org/wiki/File:Wolf_howls.ogg
+
+    Медведь — Shizhao, CC BY 3.0
+    commons.wikimedia.org/wiki/File:Bear_growl.ogg
+    creativecommons.org/licenses/by/3.0
+
+    Ворона — Marie-Lan Taÿ Pamart, CC BY-SA 4.0
+    commons.wikimedia.org/wiki/File:Corvus_corone_-_Carrion_Crow_XC511975.mp3
+    creativecommons.org/licenses/by-sa/4.0
+
+    Кукушка — User:Κ64, CC BY 3.0
+    commons.wikimedia.org/wiki/File:Cuculus_canorus_v01.ogg
+    creativecommons.org/licenses/by/3.0
+
+    Слон — தகவலுழவன், CC0 1.0
+    commons.wikimedia.org/wiki/File:Elephant_voice_-_trumpeting.ogg
+    creativecommons.org/publicdomain/zero/1.0
+
     Записи перекодированы в моно 44,1 кГц, обрезаны и нормализованы.
     Полные условия лицензий: creativecommons.org/licenses
 """.trimIndent()

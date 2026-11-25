@@ -158,6 +158,12 @@ fun animalEmoji(id: String): String = when (id) {
     "mouse" -> "🐭"
     "bee" -> "🐝"
     "turkey" -> "🦃"
+    "chicken" -> "🐔"
+    "wolf" -> "🐺"
+    "bear" -> "🐻"
+    "crow" -> "🐦"
+    "cuckoo" -> "🐦"
+    "elephant" -> "🐘"
     else -> "🐾"
 }
 

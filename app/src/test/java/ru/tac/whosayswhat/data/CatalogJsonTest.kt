@@ -23,7 +23,7 @@ class CatalogJsonTest {
             File(assetsDir, "catalog.json").readText(),
         )
 
-        assertTrue("В каталоге меньше 16 животных", catalog.animals.size >= 16)
+        assertTrue("В каталоге меньше 22 животных", catalog.animals.size >= 22)
         assertEquals(
             "id животных должны быть уникальны",
             catalog.animals.size,

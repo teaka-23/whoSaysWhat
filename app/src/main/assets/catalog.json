@@ -1,5 +1,5 @@
 {
-  "version": "0.2.0",
+  "version": "0.3.0",
   "animals": [
     {
       "id": "cow",
@@ -159,6 +159,66 @@
       "onomatopoeia_text": "Бал-бал!",
       "simple_onomatopoeia": "Бал",
       "hint_detail": "хвост веером, красная серёжка",
+      "level": 1
+    },
+    {
+      "id": "chicken",
+      "name": "Курица",
+      "image": "images/chicken_512.png",
+      "sound_file": "sounds/chicken_real.wav",
+      "onomatopoeia_text": "Ко-ко-ко!",
+      "simple_onomatopoeia": "Ко-ко",
+      "hint_detail": "красный гребешок, клюв и серёжка",
+      "level": 1
+    },
+    {
+      "id": "wolf",
+      "name": "Волк",
+      "image": "images/wolf_512.png",
+      "sound_file": "sounds/wolf_real.wav",
+      "onomatopoeia_text": "У-у-у!",
+      "simple_onomatopoeia": "У-у",
+      "hint_detail": "серые уши торчком, пушистый хвост",
+      "level": 1
+    },
+    {
+      "id": "bear",
+      "name": "Медведь",
+      "image": "images/bear_512.png",
+      "sound_file": "sounds/bear_real.wav",
+      "onomatopoeia_text": "Р-р-р!",
+      "simple_onomatopoeia": "Р-р",
+      "hint_detail": "круглые уши, коричневая шерсть, светлая морда",
+      "level": 1
+    },
+    {
+      "id": "crow",
+      "name": "Ворона",
+      "image": "images/crow_512.png",
+      "sound_file": "sounds/crow_real.wav",
+      "onomatopoeia_text": "Кар-кар!",
+      "simple_onomatopoeia": "Кар",
+      "hint_detail": "чёрные перья, крупный клюв",
+      "level": 1
+    },
+    {
+      "id": "cuckoo",
+      "name": "Кукушка",
+      "image": "images/cuckoo_512.png",
+      "sound_file": "sounds/cuckoo_real.wav",
+      "onomatopoeia_text": "Ку-ку!",
+      "simple_onomatopoeia": "Ку-ку",
+      "hint_detail": "полосатая грудка, длинный хвост",
+      "level": 1
+    },
+    {
+      "id": "elephant",
+      "name": "Слон",
+      "image": "images/elephant_512.png",
+      "sound_file": "sounds/elephant_real.wav",
+      "onomatopoeia_text": "Ту-ту-у!",
+      "simple_onomatopoeia": "Ту-ту",
+      "hint_detail": "большие уши, хобот, бивни",
       "level": 1
     }
   ]

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Готовит короткие фрагменты «мяу», «хрю» и жужжания пчелы из оригиналов.
+"""Готовит короткие фрагменты звуков животных из оригиналов.
 
-Первая версия этих трёх звуков не прошла проверку на слух: у кошки стояло
+Первая версия трех звуков не прошла проверку на слух: у кошки стояло
 сиамское «мяу», похожее на плач ребёнка, у свиньи — щелчок с 80 % энергии
 выше 1,2 кГц вместо низкого хрюканья, у пчелы — писк на 8 кГц вместо
 жужжания. Скрипт режет другие записи Wikimedia Commons в тот же формат,
@@ -9,8 +9,9 @@
 короткие фейды, пик не выше 0,88, RMS около 0,15.
 
 Зависимости: numpy и soundfile (`python3 -m pip install --user soundfile`).
-FFmpeg не нужен: OGG/Opus/FLAC читаются libsndfile, ресемплинг — через
-спектр, чтобы не тянуть scipy.
+FFmpeg не нужен: OGG/FLAC/MP3 читаются libsndfile, ресемплинг — через
+спектр, чтобы не тянуть scipy. Для записей с Ogg Skeleton (курица) скрипт
+скачивает MP3-транскод Commons: такие файлы libsndfile тоже читает.
 
 Использование:
 
@@ -23,9 +24,15 @@ FFmpeg не нужен: OGG/Opus/FLAC читаются libsndfile, ресемп�
 Выбранные фрагменты сверены по признакам: у «мяу» один слог с подъёмом
 470 → 650 → 590 Гц, у хрюканья ≈ 77 % энергии ниже 300 Гц (пик спектра
 ≈ 290 Гц, выше 1,2 кГц — меньше 9 %), у жужжания основной тон 216–241 Гц
-с гармониками и ровным конвертом.
+с гармониками и ровным конвертом. У курицы выбраны звонкие «ко-ко»
+(6,60–9,00 с), у волка — один протяжный вой (2,70–4,70 с, тон 500–1100 Гц),
+у медведя — низкое рычание (0,20–2,60 с), у вороны — четыре «кар» подряд
+(0–2,55 с), у кукушки — два полных «ку-ку» (2,55–5,00 с, 650–1000 Гц),
+у слона — труба (0–1,40 с). Все фрагменты проходят через мягкий high-pass,
+чтобы убрать гул ветра и низкочастотный рокот записи.
 """
 import argparse
+import math
 import os
 import subprocess
 import urllib.parse
@@ -41,6 +48,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_OUT = os.path.join(HERE, '..', 'app', 'src', 'main', 'assets', 'sounds')
 
 # Оригиналы на Wikimedia Commons (атрибуция — в assets/licenses/animal-sounds.md).
+# dict с transcode=True — скачать MP3-транскод Commons вместо оригинала.
 SOURCES = {
     'cat_meow.ogg': 'File:Meow.ogg',
     'boar_grunts.ogg': 'File:Boar.Grwls(1).ogg',
@@ -48,6 +56,15 @@ SOURCES = {
         'File:263673 ylearkisto mehilainen-tarhamehilainen-parvi-bees-honeybees-'
         'a-swarm-of-bees-buzzing-among-the-flowers-apis-mellifera.wav'
     ),
+    'chicken_clucks.mp3': {
+        'title': 'File:Chickens demanding food.ogg',
+        'transcode': True,
+    },
+    'wolf_howls.ogg': 'File:Wolf howls.ogg',
+    'bear_growl.ogg': 'File:Bear growl.ogg',
+    'crow_caws.mp3': 'File:Corvus corone - Carrion Crow XC511975.mp3',
+    'cuckoo_song.ogg': 'File:Cuculus canorus v01.ogg',
+    'elephant_trumpet.ogg': 'File:Elephant voice - trumpeting.ogg',
 }
 
 # out: имя ассета, src: файл в --src-dir, start/length: окно в секундах.
@@ -55,13 +72,22 @@ CLIPS = (
     dict(out='cat_real.wav', src='cat_meow.ogg', start=0.00, length=0.75, fade_in=0.005, fade_out=0.15),
     dict(out='pig_real.wav', src='boar_grunts.ogg', start=14.60, length=1.80, fade_in=0.03, fade_out=0.15),
     dict(out='bee_real.wav', src='bee_swarm.wav', start=29.00, length=2.20, fade_in=0.10, fade_out=0.20),
+    dict(out='chicken_real.wav', src='chicken_clucks.mp3', start=6.60, length=2.40, fade_in=0.01, fade_out=0.15, high_pass=150),
+    dict(out='wolf_real.wav', src='wolf_howls.ogg', start=2.70, length=2.00, fade_in=0.03, fade_out=0.20, high_pass=200),
+    dict(out='bear_real.wav', src='bear_growl.ogg', start=0.20, length=2.40, fade_in=0.03, fade_out=0.20, high_pass=60),
+    dict(out='crow_real.wav', src='crow_caws.mp3', start=0.00, length=2.55, fade_in=0.02, fade_out=0.15, high_pass=150),
+    dict(out='cuckoo_real.wav', src='cuckoo_song.ogg', start=2.55, length=2.45, fade_in=0.02, fade_out=0.15, high_pass=200),
+    dict(out='elephant_real.wav', src='elephant_trumpet.ogg', start=0.00, length=1.40, fade_in=0.02, fade_out=0.15, high_pass=60),
 )
 
 
 def fetch(src_dir: str) -> None:
     """Скачивает оригиналы по коротким именам из SOURCES."""
     ua = 'whoSaysWhat-assets/1.0 (kids app; sounds build script)'
-    for name, title in SOURCES.items():
+    for name, entry in SOURCES.items():
+        if isinstance(entry, str):
+            entry = {'title': entry}
+        title = entry['title']
         dst = os.path.join(src_dir, name)
         if os.path.exists(dst) and os.path.getsize(dst) > 4096:
             print(f'уже есть: {dst}')
@@ -78,9 +104,18 @@ def fetch(src_dir: str) -> None:
         page = next(iter(json.loads(raw)['query']['pages'].values()))
         if 'imageinfo' not in page:
             raise SystemExit(f'на Commons нет файла {title}')
-        url = page['imageinfo'][0]['url']
+        url = page['imageinfo'][0]['url'].split('?')[0]
+        if entry.get('transcode'):
+            url = (
+                url.replace('/wikipedia/commons/', '/wikipedia/commons/transcoded/')
+                + '/' + os.path.basename(url) + '.mp3'
+            )
         print(f'скачиваю {name}')
-        subprocess.run(['curl', '-sL', '-m', '600', '-A', ua, '-o', dst, url], check=True)
+        subprocess.run(
+            ['curl', '-fL', '--retry', '5', '--retry-delay', '2', '--retry-all-errors',
+             '-m', '600', '-A', ua, '-o', dst, url],
+            check=True,
+        )
 
 
 def read_mono(path: str):
@@ -114,10 +149,33 @@ def fade(x: np.ndarray, sr: int, fade_in: float, fade_out: float) -> np.ndarray:
     return x
 
 
+def high_pass(x: np.ndarray, sr: int, cutoff: float) -> np.ndarray:
+    """Однополюсный high-pass: убирает гул и ветер, не трогая голос."""
+    if not cutoff:
+        return x
+    rc = 1.0 / (2.0 * math.pi * cutoff)
+    alpha = rc / (rc + 1.0 / sr)
+    y = np.empty_like(x)
+    prev_x = 0.0
+    prev_y = 0.0
+    for index, sample in enumerate(x):
+        prev_y = alpha * (prev_y + sample - prev_x)
+        prev_x = sample
+        y[index] = prev_y
+    return y
+
+
 def level(x: np.ndarray) -> np.ndarray:
     """Подтягивает RMS к общему уровню остальных звуков, но не выше пика 0.88."""
-    rms = float(np.sqrt(np.mean(x ** 2))) or 1.0
-    x = x * (RMS / rms)
+    for _ in range(4):
+        rms = float(np.sqrt(np.mean(x ** 2))) or 1.0
+        x = x * (RMS / rms)
+        peak = float(np.max(np.abs(x))) or 1.0
+        if peak <= PEAK:
+            break
+        # Мягко ограничиваем одиночные щелчки, иначе из-за них весь фрагмент
+        # приходится делать тише остальных.
+        x = np.tanh(x / PEAK) * PEAK / np.tanh(1.0)
     peak = float(np.max(np.abs(x))) or 1.0
     if peak > PEAK:
         x = x * (PEAK / peak)
@@ -143,6 +201,7 @@ def main() -> None:
         if b > len(data):
             raise SystemExit(f'{src}: запись короче {clip["start"] + clip["length"]:.2f} с')
         piece = resample(data[a:b], sr)
+        piece = high_pass(piece, SR, clip.get('high_pass', 0))
         piece = fade(piece, SR, clip['fade_in'], clip['fade_out'])
         piece = level(piece)
         dst = os.path.join(args.out_dir, clip['out'])
