@@ -6,8 +6,8 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
-val Cream = Color(0xFFF5F6FA)
-val Ink = Color(0xFF37474F)
+val Cream = Color(0xFFFFF8EE)
+val Ink = Color(0xFF4C3D35)
 val Mint = Color(0xFF80CBC4)
 val Teal = Color(0xFF00695C)
 val Sunny = Color(0xFFFFD180)
@@ -23,10 +23,10 @@ private val KidColorScheme = lightColorScheme(
     onSecondary = Ink,
     background = Cream,
     onBackground = Ink,
-    surface = Color.White,
+    surface = Color(0xFFFFFDF8),
     onSurface = Ink,
-    surfaceVariant = Color(0xFFE8EDF2),
-    onSurfaceVariant = Color(0xFF546E7A),
+    surfaceVariant = Color(0xFFF2E7D8),
+    onSurfaceVariant = Color(0xFF6D5A4E),
 )
 
 @Composable

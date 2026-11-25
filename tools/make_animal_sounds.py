@@ -1,12 +1,18 @@
 #!/usr/bin/env python3
 """Готовит короткие фрагменты звуков животных из оригиналов.
 
-Первая версия трех звуков не прошла проверку на слух: у кошки стояло
+Первая версия трёх звуков не прошла проверку на слух: у кошки стояло
 сиамское «мяу», похожее на плач ребёнка, у свиньи — щелчок с 80 % энергии
 выше 1,2 кГц вместо низкого хрюканья, у пчелы — писк на 8 кГц вместо
 жужжания. Скрипт режет другие записи Wikimedia Commons в тот же формат,
 что и остальные `assets/sounds/*_real.wav`: моно 44,1 кГц PCM 16 бит,
 короткие фейды, пик не выше 0,88, RMS около 0,15.
+
+Для гуся, свиньи, осла и мышки выбраны более чистые и дружелюбные записи:
+домашние гуси, три настоящих «oink» с фермы Mudchute, полный «иа» осла и два
+коротких пика мышки вместо шумного превью. Волк перерезан на более низком
+и мягком вое. Всем новым фрагментам добавлен gentle low-pass: он убирает
+шипение и щелчки, не делая голос глухим.
 
 Зависимости: numpy и soundfile (`python3 -m pip install --user soundfile`).
 FFmpeg не нужен: OGG/FLAC/MP3 читаются libsndfile, ресемплинг — через
@@ -22,14 +28,15 @@ FFmpeg не нужен: OGG/FLAC/MP3 читаются libsndfile, ресемпл
 файлы с именами из `SOURCES` в `--src-dir`.
 
 Выбранные фрагменты сверены по признакам: у «мяу» один слог с подъёмом
-470 → 650 → 590 Гц, у хрюканья ≈ 77 % энергии ниже 300 Гц (пик спектра
-≈ 290 Гц, выше 1,2 кГц — меньше 9 %), у жужжания основной тон 216–241 Гц
-с гармониками и ровным конвертом. У курицы выбраны звонкие «ко-ко»
-(6,60–9,00 с), у волка — один протяжный вой (2,70–4,70 с, тон 500–1100 Гц),
-у медведя — низкое рычание (0,20–2,60 с), у вороны — четыре «кар» подряд
-(0–2,55 с), у кукушки — два полных «ку-ку» (2,55–5,00 с, 650–1000 Гц),
-у слона — труба (0–1,40 с). Все фрагменты проходят через мягкий high-pass,
-чтобы убрать гул ветра и низкочастотный рокот записи.
+470 → 650 → 590 Гц; у гуся — ровные домашние «га-га» (3,55–6,00 с); у свиньи —
+три коротких «oink» с фермы Mudchute (0,34 / 0,28 / 0,18 с); у осла — полное
+«иа» с вдохом и выдохом (5,90–8,60 с); у мышки — два пика в 1,5–4 кГц
+(0,27–0,51 и 3,27–3,63 с); у волка — низкий вой с основным тоном ≈ 400–500 Гц
+(9,00–11,30 с). У курицы выбраны звонкие «ко-ко» (6,60–9,00 с), у медведя —
+низкое рычание (0,20–2,60 с), у вороны — четыре «кар» подряд (0–2,55 с),
+у кукушки — два полных «ку-ку» (2,55–5,00 с, 650–1000 Гц), у слона — труба
+(0–1,40 с). Все фрагменты проходят через мягкий high-pass, а новые — ещё и
+через gentle low-pass, чтобы убрать гул, шипение и щелчки.
 """
 import argparse
 import math
@@ -51,7 +58,10 @@ DEFAULT_OUT = os.path.join(HERE, '..', 'app', 'src', 'main', 'assets', 'sounds')
 # dict с transcode=True — скачать MP3-транскод Commons вместо оригинала.
 SOURCES = {
     'cat_meow.ogg': 'File:Meow.ogg',
-    'boar_grunts.ogg': 'File:Boar.Grwls(1).ogg',
+    'goose_honking.ogg': 'File:Geese Honking (loud).ogg',
+    'pig_oink_1.ogg': 'File:Mudchute pig 1.ogg',
+    'pig_oink_2.ogg': 'File:Mudchute pig 2.ogg',
+    'pig_oink_3.ogg': 'File:Mudchute pig 3.ogg',
     'bee_swarm.wav': (
         'File:263673 ylearkisto mehilainen-tarhamehilainen-parvi-bees-honeybees-'
         'a-swarm-of-bees-buzzing-among-the-flowers-apis-mellifera.wav'
@@ -60,6 +70,11 @@ SOURCES = {
         'title': 'File:Chickens demanding food.ogg',
         'transcode': True,
     },
+    'donkey_bray.wav': (
+        'File:157763 felix-blume a-donkey-is-braying-in-his-enclosure-in-'
+        'south-of-france.wav'
+    ),
+    'mouse_squeaks.flac': 'File:Mouse voice.flac',
     'wolf_howls.ogg': 'File:Wolf howls.ogg',
     'bear_growl.ogg': 'File:Bear growl.ogg',
     'crow_caws.mp3': 'File:Corvus corone - Carrion Crow XC511975.mp3',
@@ -68,12 +83,41 @@ SOURCES = {
 }
 
 # out: имя ассета, src: файл в --src-dir, start/length: окно в секундах.
+# parts — несколько окон подряд (для «oink-oink» и «пи-пи»); gap — пауза
+# между ними. high_pass/low_pass — однополюсные фильтры против гула и шипения.
 CLIPS = (
     dict(out='cat_real.wav', src='cat_meow.ogg', start=0.00, length=0.75, fade_in=0.005, fade_out=0.15),
-    dict(out='pig_real.wav', src='boar_grunts.ogg', start=14.60, length=1.80, fade_in=0.03, fade_out=0.15),
+    dict(
+        out='goose_real.wav', src='goose_honking.ogg', start=3.55, length=2.45,
+        fade_in=0.08, fade_out=0.25, high_pass=180, low_pass=4800,
+    ),
+    dict(
+        out='pig_real.wav',
+        parts=(
+            dict(src='pig_oink_1.ogg', start=0.00, length=0.34),
+            dict(src='pig_oink_2.ogg', start=0.04, length=0.28),
+            dict(src='pig_oink_3.ogg', start=0.02, length=0.18),
+        ),
+        gap=0.16, high_pass=250, low_pass=6000, fade_in=0.01, fade_out=0.15,
+    ),
     dict(out='bee_real.wav', src='bee_swarm.wav', start=29.00, length=2.20, fade_in=0.10, fade_out=0.20),
     dict(out='chicken_real.wav', src='chicken_clucks.mp3', start=6.60, length=2.40, fade_in=0.01, fade_out=0.15, high_pass=150),
-    dict(out='wolf_real.wav', src='wolf_howls.ogg', start=2.70, length=2.00, fade_in=0.03, fade_out=0.20, high_pass=200),
+    dict(
+        out='donkey_real.wav', src='donkey_bray.wav', start=5.90, length=2.70,
+        fade_in=0.06, fade_out=0.30, high_pass=120, low_pass=5000,
+    ),
+    dict(
+        out='mouse_real.wav',
+        parts=(
+            dict(src='mouse_squeaks.flac', start=0.27, length=0.24),
+            dict(src='mouse_squeaks.flac', start=3.27, length=0.36),
+        ),
+        gap=0.20, high_pass=900, low_pass=8000, fade_in=0.01, fade_out=0.08,
+    ),
+    dict(
+        out='wolf_real.wav', src='wolf_howls.ogg', start=9.00, length=2.30,
+        fade_in=0.12, fade_out=0.30, high_pass=90, low_pass=3000,
+    ),
     dict(out='bear_real.wav', src='bear_growl.ogg', start=0.20, length=2.40, fade_in=0.03, fade_out=0.20, high_pass=60),
     dict(out='crow_real.wav', src='crow_caws.mp3', start=0.00, length=2.55, fade_in=0.02, fade_out=0.15, high_pass=150),
     dict(out='cuckoo_real.wav', src='cuckoo_song.ogg', start=2.55, length=2.45, fade_in=0.02, fade_out=0.15, high_pass=200),
@@ -165,6 +209,20 @@ def high_pass(x: np.ndarray, sr: int, cutoff: float) -> np.ndarray:
     return y
 
 
+def low_pass(x: np.ndarray, sr: int, cutoff: float) -> np.ndarray:
+    """Однополюсный low-pass: убирает шипение и щелчки, оставляя голос тёплым."""
+    if not cutoff:
+        return x
+    rc = 1.0 / (2.0 * math.pi * cutoff)
+    alpha = 1.0 / (1.0 + rc * sr)
+    y = np.empty_like(x)
+    prev = 0.0
+    for index, sample in enumerate(x):
+        prev = prev + alpha * (sample - prev)
+        y[index] = prev
+    return y
+
+
 def level(x: np.ndarray) -> np.ndarray:
     """Подтягивает RMS к общему уровню остальных звуков, но не выше пика 0.88."""
     for _ in range(4):
@@ -194,14 +252,28 @@ def main() -> None:
         fetch(args.src_dir)
 
     for clip in CLIPS:
-        src = os.path.join(args.src_dir, clip['src'])
-        data, sr = read_mono(src)
-        a = int(clip['start'] * sr)
-        b = a + int(clip['length'] * sr)
-        if b > len(data):
-            raise SystemExit(f'{src}: запись короче {clip["start"] + clip["length"]:.2f} с')
-        piece = resample(data[a:b], sr)
-        piece = high_pass(piece, SR, clip.get('high_pass', 0))
+        parts = clip.get('parts') or (clip,)
+        pieces = []
+        for index, part in enumerate(parts):
+            src = os.path.join(args.src_dir, part['src'])
+            data, sr = read_mono(src)
+            a = int(part['start'] * sr)
+            b = a + int(part['length'] * sr)
+            if b > len(data):
+                raise SystemExit(
+                    f'{src}: запись короче {part["start"] + part["length"]:.2f} с'
+                )
+            piece = resample(data[a:b], sr)
+            piece = high_pass(piece, SR, clip.get('high_pass', 0))
+            piece = low_pass(piece, SR, clip.get('low_pass', 0))
+            if len(parts) > 1:
+                # Каждый «oink»/«пи» получает собственные микрофейды, чтобы
+                # склейка не щёлкала; общий конверт — ниже.
+                piece = fade(piece, SR, 0.006, 0.012)
+            if pieces:
+                pieces.append(np.zeros(int(clip.get('gap', 0.0) * SR)))
+            pieces.append(piece)
+        piece = np.concatenate(pieces)
         piece = fade(piece, SR, clip['fade_in'], clip['fade_out'])
         piece = level(piece)
         dst = os.path.join(args.out_dir, clip['out'])

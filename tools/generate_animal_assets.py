@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Рисует иллюстрации животных для assets/images.
 
-Стиль: мягкая пастельная «плюшевая» графика с плотным тёмным контуром,
-крупными глазами и аккуратными тенями. Все картинки квадратные 512×512
-с прозрачным фоном. Рисуем в 4× и уменьшаем — так контуры остаются гладкими.
+Стиль: мягкая пастельная «плюшевая» графика с тёплым контуром, крупными
+глазами, аккуратными тенями и лёгким кремовым ореолом. Все картинки
+квадратные 512×512 с прозрачным фоном. Рисуем в 4× и уменьшаем — так контуры
+остаются гладкими.
 """
 import math
 import os
@@ -13,8 +14,8 @@ from PIL import Image, ImageChops, ImageDraw, ImageFilter
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 OUT = os.path.join(ROOT, "app", "src", "main", "assets", "images")
 
-INK = (55, 71, 79, 255)
-INK_SOFT = (89, 104, 113, 255)
+INK = (88, 72, 64, 255)
+INK_SOFT = (128, 111, 100, 255)
 WHITE = (255, 255, 255, 255)
 CREAM = (255, 248, 225, 255)
 SUNNY = (255, 209, 128, 255)
@@ -50,53 +51,54 @@ MANE_BROWN = (93, 64, 55, 255)
 ROOSTER_CREAM = (255, 241, 210, 255)
 SHEEP_WOOL = (250, 247, 240, 255)
 SHEEP_FACE = (232, 210, 184, 255)
-PIG_PINK = (247, 169, 166, 255)
-PIG_DARK = (230, 126, 132, 255)
-GOAT_CREAM = (245, 226, 194, 255)
-HORN = (188, 170, 164, 255)
+PIG_PINK = (247, 181, 178, 255)
+PIG_DARK = (232, 145, 148, 255)
+GOAT_CREAM = (250, 235, 210, 255)
+HORN = (192, 175, 168, 255)
 FROG_GREEN = (129, 199, 132, 255)
 FROG_DARK = (85, 160, 90, 255)
 FROG_BELLY = (220, 237, 200, 255)
-GOOSE_WHITE = (250, 250, 247, 255)
-GOOSE_SHADE = (222, 226, 224, 255)
-DONKEY_GRAY = (176, 190, 197, 255)
-DONKEY_LIGHT = (224, 229, 231, 255)
-DONKEY_MANE = (84, 110, 122, 255)
-OWL_BROWN = (161, 136, 127, 255)
-OWL_CREAM = (239, 226, 203, 255)
-OWL_DARK = (109, 76, 65, 255)
-MOUSE_GRAY = (189, 189, 189, 255)
-MOUSE_LIGHT = (224, 224, 224, 255)
-MOUSE_PINK = (244, 143, 177, 255)
+GOOSE_WHITE = (255, 250, 238, 255)
+GOOSE_SHADE = (226, 226, 216, 255)
+GOOSE_WING = (242, 238, 226, 255)
+DONKEY_GRAY = (188, 194, 198, 255)
+DONKEY_LIGHT = (234, 234, 230, 255)
+DONKEY_MANE = (92, 116, 126, 255)
+OWL_BROWN = (166, 140, 128, 255)
+OWL_CREAM = (244, 231, 208, 255)
+OWL_DARK = (116, 82, 68, 255)
+MOUSE_GRAY = (200, 195, 190, 255)
+MOUSE_LIGHT = (238, 232, 224, 255)
+MOUSE_PINK = (244, 154, 181, 255)
 BEE_YELLOW = (255, 213, 79, 255)
 BEE_DARK = (93, 64, 55, 255)
 WING = (232, 245, 255, 135)
 TURKEY_BROWN = (141, 110, 99, 255)
 TURKEY_DARK = (93, 64, 55, 255)
 TURKEY_TAN = (196, 155, 112, 255)
-CHICKEN_CREAM = (255, 240, 206, 255)
-CHICKEN_WING = (241, 208, 156, 255)
-CHICKEN_FEATHER = (214, 178, 132, 255)
-CHICKEN_RED = (224, 98, 92, 255)
-WOLF_GRAY = (156, 170, 181, 255)
-WOLF_LIGHT = (226, 233, 237, 255)
-WOLF_DARK = (101, 118, 131, 255)
-BEAR_FUR = (166, 120, 84, 255)
-BEAR_LIGHT = (216, 178, 136, 255)
-BEAR_DARK = (126, 88, 62, 255)
-CROW_BLUE = (74, 88, 104, 255)
-CROW_DARK = (52, 62, 76, 255)
-CROW_GLOSS = (96, 122, 148, 255)
-CUCKOO_GRAY = (160, 174, 186, 255)
-CUCKOO_DARK = (112, 128, 142, 255)
-CUCKOO_LIGHT = (238, 240, 235, 255)
-ELEPHANT_GRAY = (158, 172, 184, 255)
-ELEPHANT_LIGHT = (208, 218, 226, 255)
-ELEPHANT_DARK = (120, 135, 148, 255)
+CHICKEN_CREAM = (255, 244, 219, 255)
+CHICKEN_WING = (244, 214, 165, 255)
+CHICKEN_FEATHER = (218, 182, 137, 255)
+CHICKEN_RED = (224, 108, 102, 255)
+WOLF_GRAY = (170, 180, 186, 255)
+WOLF_LIGHT = (232, 236, 238, 255)
+WOLF_DARK = (118, 132, 141, 255)
+BEAR_FUR = (170, 124, 88, 255)
+BEAR_LIGHT = (220, 184, 142, 255)
+BEAR_DARK = (130, 92, 66, 255)
+CROW_BLUE = (82, 94, 110, 255)
+CROW_DARK = (64, 74, 88, 255)
+CROW_GLOSS = (104, 130, 154, 255)
+CUCKOO_GRAY = (168, 180, 190, 255)
+CUCKOO_DARK = (118, 132, 144, 255)
+CUCKOO_LIGHT = (242, 242, 234, 255)
+ELEPHANT_GRAY = (172, 181, 190, 255)
+ELEPHANT_LIGHT = (216, 223, 229, 255)
+ELEPHANT_DARK = (136, 148, 159, 255)
 
 SCALE = 4
 SIZE = 512
-STROKE = 7
+STROKE = 6
 
 
 def scaled(value):
@@ -199,7 +201,7 @@ class Canvas:
         self.image.alpha_composite(layer)
 
 
-    def shade(self, mask, box, color=(30, 40, 50, 42), blur=16):
+    def shade(self, mask, box, color=(92, 70, 56, 36), blur=16):
         layer = Image.new("RGBA", self.image.size, (0, 0, 0, 0))
         ImageDraw.Draw(layer).ellipse(self.box(*box), fill=color)
         layer = layer.filter(ImageFilter.GaussianBlur(scaled(blur)))
@@ -216,19 +218,35 @@ class Canvas:
     def ground_shadow(self, left, top, right, bottom, opacity=40):
         layer = Image.new("RGBA", self.image.size, (0, 0, 0, 0))
         ImageDraw.Draw(layer).ellipse(
-            self.box(left, top, right, bottom), fill=(60, 64, 67, opacity)
+            self.box(left, top, right, bottom), fill=(94, 78, 68, opacity)
         )
         layer = layer.filter(ImageFilter.GaussianBlur(scaled(10)))
         self.image.alpha_composite(layer)
 
-    def blush(self, left, top, right, bottom, opacity=95):
+    def blush(self, left, top, right, bottom, opacity=105):
         layer = Image.new("RGBA", self.image.size, (0, 0, 0, 0))
         ImageDraw.Draw(layer).ellipse(
             self.box(left, top, right, bottom),
-            fill=(255, 145, 128, opacity),
+            fill=(255, 148, 132, opacity),
         )
-        layer = layer.filter(ImageFilter.GaussianBlur(scaled(7)))
+        layer = layer.filter(ImageFilter.GaussianBlur(scaled(8)))
         self.image.alpha_composite(layer)
+
+    def warm_halo(self):
+        """Мягкий кремовый ореол: карточки перестают выглядеть вырезанными
+        на белом и становятся похожи на тёплые наклейки."""
+        layer = Image.new("RGBA", self.image.size, (0, 0, 0, 0))
+        draw = ImageDraw.Draw(layer)
+        for inset, color in (
+            (0, (255, 238, 218, 50)),
+            (32, (255, 244, 228, 62)),
+            (66, (255, 249, 238, 58)),
+        ):
+            draw.ellipse(
+                self.box(54 + inset, 62 + inset, 458 - inset, 466 - inset),
+                fill=color,
+            )
+        return layer.filter(ImageFilter.GaussianBlur(scaled(16)))
 
     def eye(self, cx, cy, rx=20, ry=24, lash=False, sparkle=True):
         self.ellipse(
@@ -286,8 +304,12 @@ class Canvas:
             art,
             ((canvas.width - art.width) // 2, (canvas.height - art.height) // 2),
         )
+        # Ореол кладём под рисунок, чтобы он не пачкал контуры и тени.
+        final = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
+        final.alpha_composite(self.warm_halo())
+        final.alpha_composite(canvas)
         path = os.path.join(OUT, f"{name}_512.png")
-        canvas.resize((SIZE, SIZE), Image.LANCZOS).save(path, "PNG", optimize=True)
+        final.resize((SIZE, SIZE), Image.LANCZOS).save(path, "PNG", optimize=True)
         return path
 
 
@@ -1043,9 +1065,12 @@ def goose():
 
     # Крыло.
     wing = (138, 368, 298, 474)
-    c.ellipse(*wing, fill=CREAM, outline=INK, width=5)
-    c.arc(160, 398, 272, 444, 200, 340, fill=GOOSE_SHADE, width=4)
-    c.arc(160, 426, 256, 462, 200, 320, fill=GOOSE_SHADE, width=3)
+    c.ellipse(*wing, fill=GOOSE_WING, outline=INK, width=5)
+    wing_mask = c.inset(c.shape_mask_ellipse(*wing), 2)
+    c.highlight(wing_mask, (154, 386, 238, 428), (255, 255, 255, 85))
+    for y in (402, 428):
+        c.arc(160, y, 272, y + 26, 200, 340, fill=GOOSE_SHADE, width=4)
+    c.arc(160, 452, 256, 474, 200, 320, fill=GOOSE_SHADE, width=3)
 
     # Голова.
     head = (170, 68, 344, 252)
@@ -1056,8 +1081,8 @@ def goose():
 
     c.eye(220, 140)
     c.eye(296, 140)
-    c.blush(182, 178, 216, 206, opacity=70)
-    c.blush(300, 178, 334, 206, opacity=70)
+    c.blush(182, 178, 216, 206, opacity=85)
+    c.blush(300, 178, 334, 206, opacity=85)
 
     # Длинный клюв с небольшой шишкой у основания.
     c.blob(
@@ -1157,6 +1182,8 @@ def owl():
     c.shade(face_mask, (160, 240, 360, 316), (140, 100, 70, 26))
     c.arc(190, 148, 246, 208, 180, 360, fill=(210, 186, 154, 255), width=3)
     c.arc(266, 148, 322, 208, 180, 360, fill=(210, 186, 154, 255), width=3)
+    c.blush(154, 246, 198, 276, opacity=65)
+    c.blush(314, 246, 358, 276, opacity=65)
 
     # Глаза совы.
     for cx in (212, 300):
@@ -1585,6 +1612,8 @@ def crow():
     for cx in (204, 308):
         c.ellipse(cx - 26, 220, cx + 26, 274, fill=(242, 246, 250, 255), outline=INK, width=4)
         c.eye(cx, 247, rx=15, ry=19)
+    c.blush(154, 286, 198, 316, opacity=65)
+    c.blush(314, 286, 358, 316, opacity=65)
 
     # Клюв: крупный, с крючком на конце и светлой спинкой, чтобы читался
     # на тёмном оперении.
@@ -1647,6 +1676,8 @@ def cuckoo():
     for cx in (204, 308):
         c.ellipse(cx - 28, 218, cx + 28, 274, fill=YELLOW, outline=INK, width=4)
         c.eye(cx, 246, rx=15, ry=19)
+    c.blush(160, 282, 204, 310, opacity=65)
+    c.blush(308, 282, 352, 310, opacity=65)
 
     # Небольшой, но заметный клюв.
     c.polygon([(234, 272), (282, 268), (262, 334), (252, 314)],

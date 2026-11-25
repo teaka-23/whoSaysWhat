@@ -100,9 +100,11 @@ private val SOUND_CREDITS = """
     Овца — earthcalling, общественное достояние
     commons.wikimedia.org/wiki/File:Sheep_bleating.ogg
 
-    Свинья — GrWolf1129, CC BY-SA 4.0
-    commons.wikimedia.org/wiki/File:Boar.Grwls(1).ogg
-    creativecommons.org/licenses/by-sa/4.0
+    Свинья — Secretlondon, CC BY-SA 3.0
+    commons.wikimedia.org/wiki/File:Mudchute_pig_1.ogg
+    commons.wikimedia.org/wiki/File:Mudchute_pig_2.ogg
+    commons.wikimedia.org/wiki/File:Mudchute_pig_3.ogg
+    creativecommons.org/licenses/by-sa/3.0
 
     Коза — stephan, общественное достояние
     commons.wikimedia.org/wiki/File:Herd_of_goats_bleating.ogg
@@ -111,9 +113,8 @@ private val SOUND_CREDITS = """
     commons.wikimedia.org/wiki/File:Single_Frog_Croak.oga
     creativecommons.org/licenses/by-sa/4.0
 
-    Гусь — Grégoire Chauvot, CC0 1.0
-    commons.wikimedia.org/wiki/File:Red-breasted_Goose_call_(Branta_ruficollis).ogg
-    creativecommons.org/publicdomain/zero/1.0
+    Гусь — U.S. Fish and Wildlife Service, общественное достояние
+    commons.wikimedia.org/wiki/File:Geese_Honking_(loud).ogg
 
     Осёл — felix-blume, CC0 1.0
     commons.wikimedia.org/wiki/File:157763_felix-blume_a-donkey-is-braying-in-his-enclosure-in-south-of-france.wav
@@ -123,9 +124,9 @@ private val SOUND_CREDITS = """
     commons.wikimedia.org/wiki/File:Strix_aluco_male.oga
     creativecommons.org/licenses/by-sa/4.0
 
-    Мышка — shyguy014, CC0 1.0
-    freesound.org/people/shyguy014/sounds/463789
-    creativecommons.org/publicdomain/zero/1.0
+    Мышка — Yosef Ben Melamed, CC BY-SA 4.0
+    commons.wikimedia.org/wiki/File:Mouse_voice.flac
+    creativecommons.org/licenses/by-sa/4.0
 
     Пчела — YleArkisto, CC BY 3.0
     commons.wikimedia.org/wiki/File:263673_ylearkisto_mehilainen-tarhamehilainen-parvi-bees-honeybees-a-swarm-of-bees-buzzing-among-the-flowers-apis-mellifera.wav

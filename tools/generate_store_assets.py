@@ -12,8 +12,8 @@ from PIL import Image, ImageDraw, ImageFont
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 ASSETS = os.path.join(ROOT, "store", "assets")
 
-INK = (55, 71, 79, 255)
-CREAM = (245, 246, 250, 255)
+INK = (76, 61, 53, 255)
+CREAM = (255, 248, 238, 255)
 SUNNY = (255, 209, 128, 255)
 PEACH = (255, 204, 188, 255)
 BROWN = (141, 110, 99, 255)
