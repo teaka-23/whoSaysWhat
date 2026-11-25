@@ -32,6 +32,7 @@ class SoundPlayer(context: Context) {
     private val sampleToPath = mutableMapOf<Int, String>()
     private val loadedPaths = mutableSetOf<String>()
     private val failedPaths = mutableSetOf<String>()
+    private val durations = mutableMapOf<String, Long>()
     private var pendingPath: String? = null
     private var focusRequest: AudioFocusRequest? = null
     private var activeStreamId = 0
@@ -70,6 +71,31 @@ class SoundPlayer(context: Context) {
         } else {
             pendingPath = path
         }
+    }
+
+    /**
+     * Длительность звука в миллисекундах по заголовку WAV. Нужна, чтобы
+     * назвать животное ровно после того, как запись доиграет. 0 — файл не
+     * WAV или заголовок не читается; вызывающий код подставит запас.
+     */
+    fun durationMs(path: String): Long {
+        durations[path]?.let { return it }
+        val duration = runCatching {
+            appContext.assets.openFd(path).use { descriptor ->
+                appContext.assets.open(path).use { stream ->
+                    val header = ByteArray(HEADER_BYTES)
+                    var read = 0
+                    while (read < header.size) {
+                        val count = stream.read(header, read, header.size - read)
+                        if (count <= 0) break
+                        read += count
+                    }
+                    wavDurationMs(header.copyOf(read), descriptor.length)
+                }
+            }
+        }.getOrNull() ?: 0L
+        durations[path] = duration
+        return duration
     }
 
     private fun load(path: String) {
@@ -120,11 +146,13 @@ class SoundPlayer(context: Context) {
         sampleIds.clear()
         sampleToPath.clear()
         loadedPaths.clear()
+        durations.clear()
     }
 
     private companion object {
         const val TAG = "SoundPlayer"
         const val VOLUME = 1f
         const val PRIORITY = 1
+        const val HEADER_BYTES = 4096
     }
 }

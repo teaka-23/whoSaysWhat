@@ -27,6 +27,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlinx.coroutines.launch
 import ru.tac.whosayswhat.audio.EchoRecorder
 import ru.tac.whosayswhat.audio.SoundPlayer
+import ru.tac.whosayswhat.audio.SpeechAnnouncer
 import ru.tac.whosayswhat.audio.scheduleRecordAudioPermissionRevocation
 import ru.tac.whosayswhat.data.Animal
 import ru.tac.whosayswhat.data.AnimalProgress
@@ -76,6 +77,21 @@ fun App(
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
+    // Названия животных озвучивает системный синтезатор речи: в песочнице
+    // после звука ребёнок слышит слово. Сеть приложению для этого не нужна.
+    val announcer = remember(context) { SpeechAnnouncer(context) }
+    DisposableEffect(announcer) {
+        onDispose { announcer.release() }
+    }
+    // Ушли в фон — не досказываем название поверх чужого приложения.
+    DisposableEffect(lifecycleOwner, announcer) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP) announcer.stop()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
     LaunchedEffect(storedEchoEnabled, echoEnabledOverride) {
         if (
             echoEnabledOverride != null &&
@@ -108,6 +124,14 @@ fun App(
     var screen by remember { mutableStateOf<Screen>(Screen.Sandbox) }
     var parentPanel by remember { mutableStateOf(false) }
     var echoAnimal by remember { mutableStateOf<Animal?>(null) }
+
+    // Название относится только к песочнице: в игре, панели родителей
+    // и диалоге «Эхо» оно не должно досказываться поверх интерфейса.
+    LaunchedEffect(screen, parentPanel, echoAnimal) {
+        if (screen != Screen.Sandbox || parentPanel || echoAnimal != null) {
+            announcer.stop()
+        }
+    }
 
     val animals = catalog?.animals.orEmpty()
 
@@ -152,7 +176,13 @@ fun App(
                         animals = loaded.animals,
                         echoEnabled = echoEnabled,
                         preferredEchoAnimalId = echoAnimalId,
-                        onAnimalSound = { soundPlayer.play(it.soundFile) },
+                        onAnimalSound = { animal ->
+                            soundPlayer.play(animal.soundFile)
+                            announcer.announceAfter(
+                                soundDurationMs = soundPlayer.durationMs(animal.soundFile),
+                                name = animal.name,
+                            )
+                        },
                         onStartGame = { screen = Screen.Guess },
                         onEcho = { echoAnimal = it },
                         onOpenParentPanel = { parentPanel = true },

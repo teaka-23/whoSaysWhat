@@ -9,6 +9,17 @@
     -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
+    <!--
+        Android 11+ скрывает сторонние пакеты. Без этого запроса приложение
+        не увидит системный синтезатор речи и названия животных не озвучатся
+        (сам звук животного при этом работает).
+    -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
+    </queries>
+
     <application
         android:allowBackup="false"
         android:icon="@drawable/ic_launcher"
