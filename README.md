@@ -174,6 +174,7 @@ app/src/test/…/
 tools/generate_animal_assets.py  # 22 иллюстрации
 tools/make_animal_sounds.py      # короткие фрагменты звуков животных из записей Commons
 tools/generate_store_assets.py   # иконка и баннер RuStore
+tools/check_moderator_note.py    # лимит 180 символов у сообщения модератору
 tools/sync_global_skills.sh      # нейтральные навыки в ~/.cline/skills
 ```
 
