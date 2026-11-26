@@ -35,21 +35,31 @@ def rounded_mask(size: int, radius: int) -> Image.Image:
     return mask
 
 
-def draw_icon(size: int = 512, scale: int = 4) -> Image.Image:
-    # Иконка использует ту же корову, что и карточки в приложении: так
-    # магазин и игра выглядят единым целым.
-    image = Image.new("RGBA", (size, size), SUNNY)
+def cow_art() -> Image.Image:
+    """Корова без прозрачных полей вокруг: иначе в мелком размере она мелкая."""
     cow_path = os.path.join(
         ROOT, "app", "src", "main", "assets", "images", "cow_512.png"
     )
     art = Image.open(cow_path).convert("RGBA")
-    target = int(size * 0.94)
-    art.thumbnail((target, target), Image.LANCZOS)
+    return art.crop(art.getbbox())
+
+
+def draw_icon(size: int = 512, zoom: float = 0.96, dy: float = 0.01) -> Image.Image:
+    # Иконка использует ту же корову, что и карточки в приложении: так
+    # магазин и игра выглядят единым целым. Прозрачные поля исходника
+    # обрезаны, поэтому голова читается на превью 32–48 px; zoom < 1
+    # оставляет поля по краям, zoom > 1 подрезает корову.
+    image = Image.new("RGBA", (size, size), SUNNY)
+    art = cow_art()
+    width = round(size * zoom)
+    height = round(art.height * width / art.width)
+    art = art.resize((width, height), Image.LANCZOS)
     image.alpha_composite(
         art,
-        ((size - art.width) // 2, (size - art.height) // 2 + int(size * 0.015)),
+        ((size - art.width) // 2, (size - art.height) // 2 + round(size * dy)),
     )
-    return image
+    # RuStore не любит прозрачность в иконке: отдаём плотный RGB.
+    return image.convert("RGB")
 
 
 def draw_feature(width: int = 1024, height: int = 500) -> Image.Image:
@@ -59,7 +69,7 @@ def draw_feature(width: int = 1024, height: int = 500) -> Image.Image:
     draw.ellipse((470, -180, 1120, 470), fill=SUNNY)
     draw.ellipse((-120, 330, 300, 750), fill=PEACH)
 
-    icon = draw_icon(360, scale=3)
+    icon = draw_icon(360)
     icon_layer = Image.new("RGBA", (360, 360), (0, 0, 0, 0))
     icon_layer.paste(icon, (0, 0), rounded_mask(360, 84))
     image.alpha_composite(icon_layer, (88, 70))
