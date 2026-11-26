@@ -88,9 +88,24 @@ def draw_feature(width: int = 1024, height: int = 500) -> Image.Image:
 def main() -> None:
     os.makedirs(ASSETS, exist_ok=True)
 
+    icon = draw_icon()
     icon_path = os.path.join(ASSETS, "icon-512.png")
-    draw_icon().save(icon_path, "PNG", optimize=True)
+    icon.save(icon_path, "PNG", optimize=True)
     print(f"icon: {icon_path}")
+
+    # JPEG-двойник: консоль RuStore показывает по иконке только «не прошло
+    # валидацию» без деталей, поэтому держим под рукой второй формат из
+    # списка допустимых. Pillow не пишет EXIF, а baseline-JPEG читают все.
+    icon_jpg_path = os.path.join(ASSETS, "icon-512.jpg")
+    icon.save(
+        icon_jpg_path,
+        "JPEG",
+        quality=92,
+        optimize=True,
+        progressive=False,
+        dpi=(72, 72),
+    )
+    print(f"icon (jpg): {icon_jpg_path}")
 
     feature_path = os.path.join(ASSETS, "feature-1024x500.png")
     draw_feature().save(feature_path, "PNG", optimize=True)
