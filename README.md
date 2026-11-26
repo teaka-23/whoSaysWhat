@@ -288,8 +288,9 @@ $SDK/emulator/emulator -avd whosayswhat -no-window -no-audio -gpu swiftshader_in
   типы данных, обоснование разрешения, интеграции, минимальная версия Android.
 - `store/privacy-policy.md` / `.html` — политика конфиденциальности.
 - `store/assets/icon-512.png`, `feature-1024x500.png` — иконка и баннер.
-- `store/screenshots/01-sandbox.png` … `06-privacy.png` — шесть экранов
-  1080×1920, снятых с текущей сборки.
+- `store/screenshots/01-sandbox-1920x1080.jpg` … `04-privacy-1920x1080.jpg` —
+  четыре экрана 16:9 для карточки RuStore; переснимаются скриптом
+  `tools/capture_store_screenshots.sh`.
 - `THIRD_PARTY_NOTICES.md`, `app/src/main/assets/licenses/animal-sounds.md` —
   атрибуция звуков; в приложении она открывается из панели родителей.
 - `.github/workflows/pages.yml` — публикация политики на GitHub Pages.
