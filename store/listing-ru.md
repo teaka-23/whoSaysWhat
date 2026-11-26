@@ -12,6 +12,7 @@
 | Пакет | `ru.tac.whosayswhat` |
 | Версия | 0.3.1 (versionCode 4) |
 | Артефакт для загрузки | `app/build/outputs/apk/release/app-release.apk` (8,4 МБ, подписан release-ключом); резервный формат — `app/build/outputs/bundle/release/app-release.aab` (9,2 МБ) |
+| Комментарий модератору | `store/permission-justification.md`, блок «Сообщение в поле „Комментарий для модератора“» — 174 символа из лимита 180 |
 | Категория | Игры → Обучающие (для детей) |
 | Возрастной рейтинг | 0+ |
 | Цена | Бесплатно, без встроенных покупок |
