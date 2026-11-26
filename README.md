@@ -284,6 +284,8 @@ $SDK/emulator/emulator -avd whosayswhat -no-window -no-audio -gpu swiftshader_in
   анкета возрастного рейтинга и декларация безопасности данных.
 - `store/permission-justification.md` — обоснование `RECORD_AUDIO` и
   тестовый сценарий для модератора.
+- `store/rustore-technical-form.md` — значения блока «Технические сведения»:
+  типы данных, обоснование разрешения, интеграции, минимальная версия Android.
 - `store/privacy-policy.md` / `.html` — политика конфиденциальности.
 - `store/assets/icon-512.png`, `feature-1024x500.png` — иконка и баннер.
 - `store/screenshots/01-sandbox.png` … `06-privacy.png` — шесть экранов

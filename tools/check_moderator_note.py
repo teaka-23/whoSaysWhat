@@ -5,7 +5,8 @@
 символами. Текст живёт в `store/permission-justification.md` и легко
 обрастает подробностями при правках, поэтому лимит закреплён проверкой:
 первый блок после заголовка — финальный вариант (символы), второй, если
-есть, — резерв на случай байтового счётчика (байты).
+есть, — резерв на случай байтового счётчика (байты). Копия сообщения в
+`store/rustore-technical-form.md` должна совпадать с финальным вариантом.
 
 Запуск: `python3 tools/check_moderator_note.py` (в CI идёт до тестов).
 """
@@ -19,6 +20,25 @@ LIMIT_CHARS = 180
 LIMIT_BYTES = 180
 NOTE_HEADING = "## Сообщение в поле «Комментарий для модератора»"
 NOTE_PATH = Path(__file__).resolve().parent.parent / "store" / "permission-justification.md"
+FORM_PATH = Path(__file__).resolve().parent.parent / "store" / "rustore-technical-form.md"
+
+
+def fenced_blocks(text: str) -> list[str]:
+    """Возвращает все fenced-блоки документа в порядке появления."""
+    blocks: list[str] = []
+    current: list[str] | None = None
+    for line in text.splitlines():
+        if line.strip() == "```":
+            if current is None:
+                current = []
+            else:
+                blocks.append("\n".join(current).strip())
+                current = None
+        elif current is not None:
+            current.append(line.rstrip())
+    if current is not None:
+        raise SystemExit("Незакрытый блок кода в документе")
+    return [block for block in blocks if block]
 
 
 def note_blocks(text: str) -> list[str]:
@@ -31,22 +51,12 @@ def note_blocks(text: str) -> list[str]:
     if start is None:
         raise SystemExit(f"Не найден раздел «{NOTE_HEADING}» в {NOTE_PATH}")
 
-    blocks: list[str] = []
-    current: list[str] | None = None
+    section: list[str] = []
     for line in lines[start + 1:]:
         if line.startswith("## "):
             break
-        if line.strip() == "```":
-            if current is None:
-                current = []
-            else:
-                blocks.append("\n".join(current).strip())
-                current = None
-        elif current is not None:
-            current.append(line.rstrip())
-    if current is not None:
-        raise SystemExit(f"Незакрытый блок кода в разделе «{NOTE_HEADING}»")
-    return [block for block in blocks if block]
+        section.append(line)
+    return fenced_blocks("\n".join(section))
 
 
 def check(blocks: list[str]) -> list[str]:
@@ -80,9 +90,30 @@ def check(blocks: list[str]) -> list[str]:
     return problems
 
 
+def form_mismatch(note: str) -> str | None:
+    """Сверяет копию сообщения в описании технических сведений."""
+    if not FORM_PATH.exists():
+        return None
+    copies = [
+        block
+        for block in fenced_blocks(FORM_PATH.read_text(encoding="utf-8"))
+        if block.startswith("Микрофон")
+    ]
+    if copies and copies[0] != note:
+        return (
+            f"Копия сообщения в {FORM_PATH.name} не совпадает "
+            "с основной версией из permission-justification.md"
+        )
+    return None
+
+
 def main() -> int:
     blocks = note_blocks(NOTE_PATH.read_text(encoding="utf-8"))
     problems = check(blocks)
+    if blocks:
+        mismatch = form_mismatch(blocks[0])
+        if mismatch:
+            problems.append(mismatch)
     if problems:
         for problem in problems:
             print(f"ОШИБКА: {problem}", file=sys.stderr)
