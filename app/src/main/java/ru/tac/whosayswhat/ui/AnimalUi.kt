@@ -113,6 +113,9 @@ fun AnimalCard(
 ) {
     val shake = remember { Animatable(0f) }
     val interaction = remember { MutableInteractionSource() }
+    val spoken = remember(animal.name, feedback) {
+        guessCardSemantics(name = animal.name, feedback = feedback)
+    }
     val pressed by interaction.collectIsPressedAsState()
     val pressScale by animateFloatAsState(
         targetValue = if (pressed) 0.96f else 1f,
@@ -170,25 +173,15 @@ fun AnimalCard(
                     onClick = onClick,
                 )
                 // Слабовидящему ребёнку цвет ничего не говорит: исход нажатия
-                // объявляет TalkBack. liveRegion нужен только там, где ответ
-                // уже прозвучал: иначе карточки болтали бы при каждой смене
-                // раунда, когда подсветка сбрасывается.
+                // объявляет TalkBack. Тексты и условие объявления считает
+                // [guessCardSemantics] — их проверяет unit-тест.
                 .semantics {
                     // Имя — отдельной подписью, а действие — коротким
                     // «Выбрать»/«Послушать»: склейка вида «Выбрать Корова»
                     // читалась бы с ошибкой.
-                    contentDescription = animal.name
-                    when (feedback) {
-                        GuessFeedback.Correct -> {
-                            stateDescription = "Верно"
-                            liveRegion = LiveRegionMode.Polite
-                        }
-                        GuessFeedback.Wrong -> {
-                            stateDescription = "Не то, попробуй ещё"
-                            liveRegion = LiveRegionMode.Polite
-                        }
-                        GuessFeedback.None -> Unit
-                    }
+                    contentDescription = spoken.name
+                    spoken.outcome?.let { stateDescription = it }
+                    if (spoken.announceOutcome) liveRegion = LiveRegionMode.Polite
                 }
                 .padding(12.dp),
             contentAlignment = Alignment.Center,

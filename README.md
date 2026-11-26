@@ -150,6 +150,7 @@ app/src/main/
 │   ├── audio/SpeechRetryPolicy.kt # сколько ждать поднимающийся TTS
 │   ├── audio/WavDuration.kt     # длина WAV: пауза перед названием
 │   ├── audio/EchoRecorder.kt    # запись/воспроизведение «Эхо»
+│   ├── audio/EchoPlayback.kt    # кто гасит запись при звонке и кого уведомляет
 │   ├── audio/EchoPermissions.kt # отзыв RECORD_AUDIO на Android 13+
 │   ├── audio/EchoFiles.kt       # очистка временных записей
 │   ├── data/                    # Animal, CatalogRepository, ProgressStore
@@ -162,9 +163,11 @@ app/src/test/…/
 ├── data/EchoTargetTest.kt       # выбор животного для «Эхо»
 ├── data/AnimalNarrationNameTest.kt # ласковое имя и откат на обычное
 ├── audio/EchoFilesTest.kt       # очистка временных записей
+├── audio/EchoPlaybackTest.kt    # остановка «Эхо» при потере аудиофокуса
 ├── audio/WavDurationTest.kt     # длина WAV и пауза перед названием
 ├── audio/SpeechRetryPolicyTest.kt # ограниченное ожидание TTS
 ├── ui/GuessSessionTest.kt       # пауза и финал после верного ответа
+├── ui/GuessCardSemanticsTest.kt # что читает TalkBack на карточке
 ├── ui/AnimalImagesTest.kt       # размер кэша иллюстраций и пути в assets
 └── data/CatalogJsonTest.kt      # каталог, PNG 512×512 и наличие звуков
 
@@ -195,6 +198,18 @@ tools/sync_global_skills.sh      # нейтральные навыки в ~/.cli
 ограничено тремя секундами, а не длится бесконечно.
 `AnimalImagesTest` — размер кэша иллюстраций (восьмая часть кучи с
 границами 8…64 МБ) и приведение пути из каталога к имени файла в `assets`.
+`EchoPlaybackTest` — что происходит с прослушиванием записи при смене
+аудиофокуса: постоянная и временная потеря (включая приглушение) останавливают
+звук и один раз сообщают UI, возврат фокуса ничего не перезапускает, а
+завершение после потери не гасит «Играет…» второй раз.
+`GuessCardSemanticsTest` — что читает TalkBack на карточке: имя отдельно от
+действия, «Верно» / «Не то, попробуй ещё» только после нажатия.
+
+Android-обёртки (`MediaPlayer`, `AudioManager`, семантика Compose) тестами не
+покрыты — им нужен эмулятор или Robolectric, а проект собирается офлайн без
+этих зависимостей. Поэтому решения вынесены в чистые классы (`EchoPlayback`,
+`AudioFocusHold`, `guessCardSemantics`, `imageCacheBytes`), а в обёртках
+остались только вызовы API.
 
 ```bash
 ./gradlew testDebugUnitTest
@@ -246,6 +261,21 @@ $SDK/emulator/emulator -avd whosayswhat -no-window -no-audio -gpu swiftshader_in
   игру, «Выйти» вызывает `finishAndRemoveTask()` (задача исчезает из недавних);
 - Back: диалог «Эхо» закрывается, награда и игра возвращаются на песочницу,
   на песочнице не делает ничего (activity не закрывается).
+
+Что остаётся ручным (в юнит-тестах проверена только логика решения, не сами
+сервисы Android):
+
+- **Потеря аудиофокуса.** Записать «Эхо», нажать «Послушать» и во время
+  прослушивания запустить таймер, чтобы он забрал звук:
+  `adb shell am start -a android.intent.action.SET_TIMER -e android.intent.extra.alarm.LENGTH 5`
+  (или включить музыку в другом приложении). Ожидаемо: запись замолкает,
+  «Играет…» гаснет, кнопка снова «Записать». Правило «кто кого уведомляет»
+  закреплено `EchoPlaybackTest`, здесь проверяется сам `AudioManager`.
+- **TalkBack.** Включить в настройках доступности (или
+  `adb shell settings put secure enabled_accessibility_services com.google.android.marvin.talkback/com.google.android.marvin.talkback.TalkBackService && adb shell settings put secure accessibility_enabled 1`)
+  и пройти раунд: карточка читается как «Корова, кнопка, Выбрать», после
+  нажатия звучит «Верно» или «Не то, попробуй ещё», эмодзи не читаются.
+  Тексты и условия объявления закреплены `GuessCardSemanticsTest`.
 
 ## Материалы для RuStore
 
