@@ -9,6 +9,12 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
+import java.util.concurrent.ConcurrentHashMap
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 
 /**
  * Короткие звуки через SoundPool: один звук за раз, предыдущий обрывается.
@@ -38,14 +44,23 @@ class SoundPlayer(context: Context) {
         .setAudioAttributes(attributes)
         .build()
 
-    private val sampleIds = mutableMapOf<String, Int>()
-    private val sampleToPath = mutableMapOf<Int, String>()
-    private val loadedPaths = mutableSetOf<String>()
-    private val failedPaths = mutableSetOf<String>()
-    private val durations = mutableMapOf<String, Long>()
+    private val sampleIds = ConcurrentHashMap<String, Int>()
+    private val sampleToPath = ConcurrentHashMap<Int, String>()
+    private val loadedPaths = ConcurrentHashMap.newKeySet<String>()
+    private val failedPaths = ConcurrentHashMap.newKeySet<String>()
+    private val durations = ConcurrentHashMap<String, Long>()
+    @Volatile
     private var pendingPath: String? = null
     private var focusRequest: AudioFocusRequest? = null
     private var activeStreamId = 0
+
+    /** Предзагрузка идёт в фоне; после [release] её надо остановить. */
+    @Volatile
+    private var released = false
+    private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    /** Один загрузчик на путь: предзагрузка и тап могут прийти одновременно. */
+    private val loadLock = Any()
 
     private val mainHandler = Handler(Looper.getMainLooper())
     private val focusHold = AudioFocusHold()
@@ -78,6 +93,7 @@ class SoundPlayer(context: Context) {
 
     init {
         soundPool.setOnLoadCompleteListener { _, sampleId, status ->
+            if (released) return@setOnLoadCompleteListener
             val path = sampleToPath[sampleId]
             if (path != null) {
                 if (status == 0) {
@@ -94,19 +110,30 @@ class SoundPlayer(context: Context) {
         }
     }
 
-    /** Предзагрузка на старте приложения, чтобы первый тап не был тихим. */
+    /**
+     * Предзагрузка на старте приложения, чтобы первый тап не был тихим.
+     *
+     * Открытие assets и чтение WAV-заголовков идут в фоне: в каталоге больше
+     * сорока звуков, и на медленном устройстве это заметно подвешивало первый
+     * кадр после запуска. Сам `SoundPool.load` асинхронный, повторную загрузку
+     * одного и того же файла отсекает [load].
+     */
     fun preload(paths: Collection<String>) {
-        paths.asSequence().filter { it.isNotBlank() }.distinct().forEach { path ->
-            load(path)
-            // Длительность нужна сразу при старте звука: по ней считается,
-            // сколько держать аудиофокус. Читаем заголовок заранее, чтобы не
-            // открывать assets на каждый тап.
-            durationMs(path)
+        val unique = paths.asSequence().filter { it.isNotBlank() }.distinct().toList()
+        ioScope.launch {
+            unique.forEach { path ->
+                if (released) return@launch
+                load(path)
+                // Длительность нужна сразу при старте звука: по ней считается,
+                // сколько держать аудиофокус. Читаем заголовок заранее, чтобы не
+                // открывать assets на каждый тап.
+                durationMs(path)
+            }
         }
     }
 
     fun play(path: String) {
-        if (path.isBlank() || path in failedPaths) return
+        if (released || path.isBlank() || path in failedPaths) return
         val sampleId = sampleIds[path] ?: run {
             load(path)
             sampleIds[path] ?: return
@@ -144,21 +171,25 @@ class SoundPlayer(context: Context) {
     }
 
     private fun load(path: String) {
-        if (path in sampleIds || path in failedPaths) return
-        runCatching {
-            appContext.assets.openFd(path).use { descriptor ->
-                soundPool.load(descriptor, PRIORITY)
+        if (released) return
+        synchronized(loadLock) {
+            if (sampleIds.containsKey(path) || path in failedPaths) return
+            runCatching {
+                appContext.assets.openFd(path).use { descriptor ->
+                    soundPool.load(descriptor, PRIORITY)
+                }
+            }.onSuccess { sampleId ->
+                sampleIds[path] = sampleId
+                sampleToPath[sampleId] = path
+            }.onFailure { error ->
+                failedPaths += path
+                Log.w(TAG, "Не удалось загрузить звук $path", error)
             }
-        }.onSuccess { sampleId ->
-            sampleIds[path] = sampleId
-            sampleToPath[sampleId] = path
-        }.onFailure { error ->
-            failedPaths += path
-            Log.w(TAG, "Не удалось загрузить звук $path", error)
         }
     }
 
     private fun playNow(sampleId: Int) {
+        if (released) return
         // Предыдущий звук обрываем, но фокус не отдаём: он нужен новому.
         stopStream()
         requestFocusIfNeeded()
@@ -218,6 +249,8 @@ class SoundPlayer(context: Context) {
     }
 
     fun release() {
+        released = true
+        ioScope.cancel()
         stop()
         mainHandler.removeCallbacksAndMessages(null)
         soundPool.release()

@@ -153,6 +153,9 @@ fun EchoDialog(
     }
 
     fun replay(file: File) {
+        // Звук животного и запись не должны звучать одновременно: у них
+        // общий аудиовыход, и ребёнок услышал бы кашу.
+        soundPlayer.stop()
         hasPlayed = true
         playing = recorder.play(file) { playing = false }
         if (!playing) message = "Не удалось воспроизвести запись."
@@ -308,7 +311,11 @@ fun EchoDialog(
 
                     else -> IdleContent(
                         permissionGranted = permissionGranted,
-                        onListen = { soundPlayer.play(animal.gameSoundFile) },
+                        onListen = {
+                            recorder.stopPlayback()
+                            playing = false
+                            soundPlayer.play(animal.gameSoundFile)
+                        },
                         onRecord = ::beginRecording,
                     )
                 }

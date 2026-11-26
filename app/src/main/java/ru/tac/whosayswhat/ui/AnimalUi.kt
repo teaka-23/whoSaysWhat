@@ -35,7 +35,11 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextAlign
@@ -62,9 +66,17 @@ fun AnimalArtwork(
     contentDescription: String? = animal.name,
 ) {
     val context = LocalContext.current
-    var image by remember(animal.image) { mutableStateOf<ImageBitmap?>(null) }
-    LaunchedEffect(animal.image) {
-        image = withContext(Dispatchers.IO) { loadAssetImage(context, animal.image) }
+    val assetPath = remember(animal.image) { animalAssetPath(animal.image) }
+    // Кэш читается прямо в композиции: иначе при каждом возврате на экран
+    // карточка успевала мигнуть эмодзи-заглушкой.
+    var image by remember(assetPath) { mutableStateOf(assetPath?.let(AnimalImages::get)) }
+    LaunchedEffect(assetPath) {
+        if (assetPath == null || image != null) return@LaunchedEffect
+        image = withContext(Dispatchers.IO) {
+            loadAssetImage(context, assetPath)?.also { decoded ->
+                AnimalImages.put(assetPath, decoded)
+            }
+        }
     }
 
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
@@ -81,6 +93,9 @@ fun AnimalArtwork(
                 text = animalEmoji(animal.id),
                 fontSize = 64.sp,
                 textAlign = TextAlign.Center,
+                // Эмодзи — картинка-заглушка, а не подпись: TalkBack читал бы
+                // «корова» дважды — из эмодзи и из contentDescription.
+                modifier = Modifier.clearAndSetSemantics { },
             )
         }
     }
@@ -94,7 +109,7 @@ fun AnimalCard(
     modifier: Modifier = Modifier,
     shakeKey: Int = 0,
     feedback: GuessFeedback = GuessFeedback.None,
-    onClickLabel: String = "Послушать ${animal.name}",
+    onClickLabel: String = "Послушать",
 ) {
     val shake = remember { Animatable(0f) }
     val interaction = remember { MutableInteractionSource() }
@@ -155,11 +170,23 @@ fun AnimalCard(
                     onClick = onClick,
                 )
                 // Слабовидящему ребёнку цвет ничего не говорит: исход нажатия
-                // объявляет TalkBack.
+                // объявляет TalkBack. liveRegion нужен только там, где ответ
+                // уже прозвучал: иначе карточки болтали бы при каждой смене
+                // раунда, когда подсветка сбрасывается.
                 .semantics {
+                    // Имя — отдельной подписью, а действие — коротким
+                    // «Выбрать»/«Послушать»: склейка вида «Выбрать Корова»
+                    // читалась бы с ошибкой.
+                    contentDescription = animal.name
                     when (feedback) {
-                        GuessFeedback.Correct -> stateDescription = "Верно"
-                        GuessFeedback.Wrong -> stateDescription = "Не то, попробуй ещё"
+                        GuessFeedback.Correct -> {
+                            stateDescription = "Верно"
+                            liveRegion = LiveRegionMode.Polite
+                        }
+                        GuessFeedback.Wrong -> {
+                            stateDescription = "Не то, попробуй ещё"
+                            liveRegion = LiveRegionMode.Polite
+                        }
                         GuessFeedback.None -> Unit
                     }
                 }
@@ -169,8 +196,8 @@ fun AnimalCard(
             AnimalArtwork(
                 animal = animal,
                 modifier = Modifier.fillMaxSize(),
-                // Карточка уже озвучивается через onClickLabel; отдельный
-                // образ не должен становиться второй остановкой TalkBack.
+                // Карточка уже озвучивается через contentDescription; образ
+                // не должен становиться второй остановкой TalkBack.
                 contentDescription = null,
             )
         }
@@ -203,11 +230,9 @@ fun animalEmoji(id: String): String = when (id) {
     else -> "🐾"
 }
 
-private fun loadAssetImage(context: Context, path: String?): ImageBitmap? {
-    val assetPath = path?.removePrefix("assets/")?.takeIf { it.isNotBlank() } ?: return null
-    return runCatching {
+private fun loadAssetImage(context: Context, assetPath: String): ImageBitmap? =
+    runCatching {
         context.assets.open(assetPath).use { stream ->
             BitmapFactory.decodeStream(stream)?.asImageBitmap()
         }
     }.getOrNull()
-}

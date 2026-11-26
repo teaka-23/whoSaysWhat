@@ -35,6 +35,9 @@ class SpeechAnnouncer(context: Context) : TextToSpeech.OnInitListener {
     private var ready = false
     private var released = false
 
+    /** Сколько раз уже ждали поднимающийся движок для текущей фразы. */
+    private var readyAttempts = 0
+
     private val speakTask = object : Runnable {
         override fun run() {
             if (released) return
@@ -42,9 +45,17 @@ class SpeechAnnouncer(context: Context) : TextToSpeech.OnInitListener {
             val engine = tts ?: return
             if (!initialized) {
                 // Движок ещё поднимается: фраза подождёт, звук уже играет.
-                handler.postDelayed(this, READY_RETRY_MS)
+                // Но ждём ограниченно — см. [shouldKeepWaitingForTts].
+                if (!shouldKeepWaitingForTts(readyAttempts)) {
+                    pendingPhrase = null
+                    Log.w(TAG, "Синтезатор речи не поднялся, фраза пропущена")
+                    return
+                }
+                readyAttempts++
+                handler.postDelayed(this, TTS_READY_RETRY_MS)
                 return
             }
+            readyAttempts = 0
             if (!ready) {
                 pendingPhrase = null
                 return
@@ -116,6 +127,7 @@ class SpeechAnnouncer(context: Context) : TextToSpeech.OnInitListener {
         val engine = tts ?: return
         handler.removeCallbacks(speakTask)
         pendingPhrase = narrationPhrase(narrationName)
+        readyAttempts = 0
         engine.stop()
         handler.postDelayed(speakTask, narrationDelayMs(soundDurationMs))
     }
@@ -140,7 +152,6 @@ class SpeechAnnouncer(context: Context) : TextToSpeech.OnInitListener {
         val RUSSIAN: Locale = Locale.forLanguageTag("ru-RU")
         const val TAG = "SpeechAnnouncer"
         const val UTTERANCE_ID = "animal-intro"
-        const val READY_RETRY_MS = 150L
         // Заметно медленнее обычного: название звучит почти по слогам,
         // но фраза не растягивается до невнятности.
         const val SPEECH_RATE = 0.70f

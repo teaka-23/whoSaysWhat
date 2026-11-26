@@ -5,9 +5,13 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
 import android.media.AudioAttributes
+import android.media.AudioFocusRequest
+import android.media.AudioManager
 import android.media.MediaPlayer
 import android.media.MediaRecorder
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
 import androidx.core.content.ContextCompat
@@ -34,9 +38,38 @@ fun Context.hasRecordAudioPermission(): Boolean =
 class EchoRecorder(context: Context) {
 
     private val appContext = context.applicationContext
+    private val audioManager =
+        appContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
     private var recorder: MediaRecorder? = null
     private var player: MediaPlayer? = null
     private var outputFile: File? = null
+
+    /** Кому сообщить, что прослушивание закончилось: UI гасит «Играет…». */
+    private var onPlaybackFinished: (() -> Unit)? = null
+
+    private var focusRequest: AudioFocusRequest? = null
+    private var focusGranted = false
+
+    /**
+     * Звонок или другое приложение забрало звук — запись ребёнка замолкает.
+     * Фокус берётся только на время прослушивания: держать его дольше значило
+     * бы глушить чужую музыку без причины.
+     */
+    private val focusListener = AudioManager.OnAudioFocusChangeListener { change ->
+        when (change) {
+            AudioManager.AUDIOFOCUS_LOSS,
+            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT,
+            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK,
+            -> stopPlayback(notifyFinished = true)
+        }
+    }
+
+    private val playbackAttributes = AudioAttributes.Builder()
+        .setUsage(AudioAttributes.USAGE_MEDIA)
+        .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+        .build()
+
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     /** Система остановила запись по лимиту: повторный stop() бросит исключение. */
     private var reachedMaxDuration = false
@@ -148,43 +181,78 @@ class EchoRecorder(context: Context) {
         if (!file.isFile) return false
 
         val mediaPlayer = MediaPlayer()
+        onPlaybackFinished = onFinished
         return try {
-            mediaPlayer.setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_MEDIA)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-                    .build(),
-            )
+            mediaPlayer.setAudioAttributes(playbackAttributes)
             mediaPlayer.setDataSource(file.absolutePath)
-            mediaPlayer.setOnCompletionListener {
-                player = null
-                it.release()
-                onFinished()
-            }
+            mediaPlayer.setOnCompletionListener { finished -> finishPlayback(finished) }
             mediaPlayer.setOnErrorListener { failed, what, extra ->
                 Log.w(TAG, "Ошибка воспроизведения what=$what extra=$extra")
-                player = null
-                failed.release()
-                onFinished()
+                finishPlayback(failed)
                 true
             }
             mediaPlayer.prepare()
+            // Фокус — best effort: если его не дали (например, идёт звонок),
+            // запись всё равно звучит коротко и тихо.
+            requestFocus()
             mediaPlayer.start()
             player = mediaPlayer
             true
         } catch (error: Exception) {
             Log.w(TAG, "Не удалось воспроизвести запись", error)
+            onPlaybackFinished = null
+            abandonFocus()
             runCatching { mediaPlayer.release() }
             false
         }
     }
 
-    fun stopPlayback() {
+    /**
+     * Останавливает прослушивание. [notifyFinished] — сообщить вызывающему
+     * коду, что играть больше нечего: так UI гасит «Играет…», если звук забрал
+     * звонок. При обычной остановке UI сам знает, что запись кончилась.
+     */
+    fun stopPlayback(notifyFinished: Boolean = false) {
+        val callback = onPlaybackFinished.takeIf { notifyFinished }
+        onPlaybackFinished = null
         player?.let { mediaPlayer ->
             player = null
             runCatching { if (mediaPlayer.isPlaying) mediaPlayer.stop() }
             runCatching { mediaPlayer.release() }
         }
+        abandonFocus()
+        callback?.invoke()
+    }
+
+    private fun finishPlayback(mediaPlayer: MediaPlayer) {
+        if (player !== mediaPlayer) {
+            // Прослушивание уже остановили вручную или заменили новой записью.
+            runCatching { mediaPlayer.release() }
+            return
+        }
+        player = null
+        runCatching { mediaPlayer.release() }
+        abandonFocus()
+        val callback = onPlaybackFinished
+        onPlaybackFinished = null
+        callback?.invoke()
+    }
+
+    private fun requestFocus() {
+        val request = focusRequest ?: AudioFocusRequest
+            .Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
+            .setAudioAttributes(playbackAttributes)
+            .setOnAudioFocusChangeListener(focusListener, mainHandler)
+            .build()
+            .also { focusRequest = it }
+        focusGranted =
+            audioManager.requestAudioFocus(request) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
+    }
+
+    private fun abandonFocus() {
+        if (!focusGranted) return
+        focusGranted = false
+        focusRequest?.let { audioManager.abandonAudioFocusRequest(it) }
     }
 
     /** Полная очистка: останавливает всё и удаляет запись. */

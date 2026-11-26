@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -18,6 +19,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
@@ -29,6 +31,9 @@ import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.delay
 import ru.tac.whosayswhat.audio.SoundPlayer
 import ru.tac.whosayswhat.ui.theme.Cream
@@ -50,6 +55,9 @@ private data class ConfettiParticle(
     val color: Color,
 )
 
+/** Сколько секунд радость висит сама, если ребёнок не нажал «Домой». */
+private const val REWARD_VISIBLE_MS = 5_000L
+
 /** Короткая награда без «петард» на весь экран: конфетти и крупное «Молодец!». */
 @Composable
 fun RewardScreen(
@@ -57,13 +65,21 @@ fun RewardScreen(
     onDone: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    LaunchedEffect(Unit) {
-        soundPlayer.play("sounds/praise.wav")
-        delay(5_000)
-        onDone()
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val latestOnDone by rememberUpdatedState(onDone)
+
+    // Похвала и отсчёт идут только пока экран на виду. Раньше корутина
+    // досчитывала в фоне и уводила ребёнка в песочницу, пока он отвлёкся:
+    // вернувшись, он уже не заставал «Молодец!».
+    LaunchedEffect(lifecycleOwner) {
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            soundPlayer.play("sounds/praise.wav")
+            delay(REWARD_VISIBLE_MS)
+            latestOnDone()
+        }
     }
 
-    Box(modifier = modifier.fillMaxSize().background(Cream)) {
+    Box(modifier = modifier.fillMaxSize().background(Cream).safeDrawingPadding()) {
         Confetti(modifier = Modifier.fillMaxSize())
         Column(
             modifier = Modifier.align(Alignment.Center).padding(24.dp),

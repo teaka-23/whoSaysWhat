@@ -42,6 +42,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -147,10 +148,18 @@ fun GuessScreen(
                             onClickLabel = "Повторить звук",
                         ) {
                             soundPlayer.play(round.target.gameSoundFile)
-                        },
+                        }
+                        // Подпись задана явно: эмодзи внутри — украшение,
+                        // и без этого TalkBack читал бы «динамик, громкость
+                        // высокая» вместо понятного действия.
+                        .semantics { contentDescription = "Повторить звук" },
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(text = "🔊", fontSize = 64.sp)
+                    Text(
+                        text = "🔊",
+                        fontSize = 64.sp,
+                        modifier = Modifier.clearAndSetSemantics { },
+                    )
                 }
 
                 // Карточки раскладываются по columns из [guessLayout]:
@@ -207,7 +216,7 @@ fun GuessScreen(
                                         correctId = correctAnimalId,
                                         wrongId = wrongAnimalId,
                                     ),
-                                    onClickLabel = "Выбрать ${animal.name}",
+                                    onClickLabel = "Выбрать",
                                 )
                             }
                             repeat(layout.columns - rowAnimals.size) {

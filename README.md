@@ -34,6 +34,11 @@ echo "sdk.dir=$ANDROID_HOME" > local.properties
 ./gradlew bundleRelease         # AAB для RuStore
 ```
 
+GitHub Actions (`.github/workflows/android.yml`) на каждый push в `main` и на
+pull request прогоняет `testDebugUnitTest`, `lintDebug` и `assembleRelease`.
+Без `keystore.properties` релизная сборка в CI неподписанная — проверяются
+только R8 и shrinkResources.
+
 `RECORD_AUDIO` запрашивается только после объяснения и явного нажатия
 «Разрешить микрофон»; без него игра работает полностью. AndroidX добавляет
 в манифест signature-level разрешение
@@ -80,6 +85,11 @@ receiver'ов — оно не показывается пользователю 
   животных произносит системный синтезатор речи — приложение само ничего
   не отправляет и не хранит.
 - **Киоск-режим**: экран не гаснет, системные панели скрыты.
+- **Доступность**: TalkBack называет животное отдельно от действия
+  («Корова», «Выбрать»), исход раунда объявляется сам через live region
+  («Верно» / «Не то, попробуй ещё»), а эмодзи-украшения не читаются.
+- **Память**: декодированные иллюстрации живут в `LruCache` (восьмая часть
+  кучи, 8…64 МБ), поэтому прокрутка песочницы не декодирует PNG заново.
 
 ## Перед публикацией
 
@@ -137,6 +147,7 @@ app/src/main/
 │   ├── MainActivity.kt          # edge-to-edge, киоск-режим
 │   ├── audio/SoundPlayer.kt     # SoundPool + AudioFocus
 │   ├── audio/SpeechAnnouncer.kt # фраза «Это слоник!» через системный TTS
+│   ├── audio/SpeechRetryPolicy.kt # сколько ждать поднимающийся TTS
 │   ├── audio/WavDuration.kt     # длина WAV: пауза перед названием
 │   ├── audio/EchoRecorder.kt    # запись/воспроизведение «Эхо»
 │   ├── audio/EchoPermissions.kt # отзыв RECORD_AUDIO на Android 13+
@@ -152,7 +163,9 @@ app/src/test/…/
 ├── data/AnimalNarrationNameTest.kt # ласковое имя и откат на обычное
 ├── audio/EchoFilesTest.kt       # очистка временных записей
 ├── audio/WavDurationTest.kt     # длина WAV и пауза перед названием
+├── audio/SpeechRetryPolicyTest.kt # ограниченное ожидание TTS
 ├── ui/GuessSessionTest.kt       # пауза и финал после верного ответа
+├── ui/AnimalImagesTest.kt       # размер кэша иллюстраций и пути в assets
 └── data/CatalogJsonTest.kt      # каталог, PNG 512×512 и наличие звуков
 
 tools/generate_animal_assets.py  # 22 иллюстрации
@@ -178,6 +191,10 @@ tools/sync_global_skills.sh      # нейтральные навыки в ~/.cli
 `GuessSessionTest` — после верного ответа игра показывает подсветку и уходит
 в следующий раунд, а последняя победа сразу открывает награду: похвалу играет
 она, и файл не звучит дважды подряд.
+`SpeechRetryPolicyTest` — ожидание поднимающегося синтезатора речи
+ограничено тремя секундами, а не длится бесконечно.
+`AnimalImagesTest` — размер кэша иллюстраций (восьмая часть кучи с
+границами 8…64 МБ) и приведение пути из каталога к имени файла в `assets`.
 
 ```bash
 ./gradlew testDebugUnitTest
