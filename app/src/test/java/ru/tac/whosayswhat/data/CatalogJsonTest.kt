@@ -33,6 +33,10 @@ class CatalogJsonTest {
         catalog.animals.forEach { animal ->
             assertTrue("Пустой id", animal.id.isNotBlank())
             assertTrue("Пустое имя у ${animal.id}", animal.name.isNotBlank())
+            assertTrue(
+                "Пустое ласковое имя у ${animal.id}",
+                !animal.affectionateName.isNullOrBlank(),
+            )
             assertTrue("Нет картинки у ${animal.id}", !animal.image.isNullOrBlank())
             assertTrue(
                 "Нет файла ${animal.soundFile} у ${animal.id}",

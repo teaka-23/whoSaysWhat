@@ -1,19 +1,30 @@
 package ru.tac.whosayswhat.ui
 
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
@@ -21,6 +32,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -34,13 +49,29 @@ import ru.tac.whosayswhat.data.AnimalProgress
 import ru.tac.whosayswhat.data.Catalog
 import ru.tac.whosayswhat.data.CatalogRepository
 import ru.tac.whosayswhat.data.ProgressStore
+import ru.tac.whosayswhat.data.isPlayable
 import ru.tac.whosayswhat.game.SessionEngine
 import ru.tac.whosayswhat.ui.theme.Cream
+import ru.tac.whosayswhat.ui.theme.Ink
+import ru.tac.whosayswhat.ui.theme.Sunny
+
+private const val TAG = "App"
 
 private sealed interface Screen {
     data object Sandbox : Screen
     data object Guess : Screen
     data object Reward : Screen
+}
+
+/**
+ * Состояние каталога. Ошибка — такое же нормальное состояние, как загрузка:
+ * ребёнок (или родитель) должен увидеть «Повторить», а не бесконечный
+ * индикатор, из которого нет выхода.
+ */
+private sealed interface CatalogState {
+    data object Loading : CatalogState
+    data object Failed : CatalogState
+    data class Ready(val catalog: Catalog) : CatalogState
 }
 
 /**
@@ -55,8 +86,14 @@ fun App(
     progressStore: ProgressStore,
     onExitApp: () -> Unit,
 ) {
-    val catalog by produceState<Catalog?>(initialValue = null) {
-        value = runCatching { repository.load() }.getOrNull()
+    // Номер попытки чтения каталога: «Повторить» перезапускает загрузку.
+    var loadAttempt by remember { mutableIntStateOf(0) }
+    var catalogState by remember(repository) {
+        mutableStateOf<CatalogState>(CatalogState.Loading)
+    }
+    LaunchedEffect(repository, loadAttempt) {
+        catalogState = CatalogState.Loading
+        catalogState = loadCatalog(repository)
     }
     val progress by progressStore.animalProgress
         .collectAsState(initial = emptyMap<String, AnimalProgress>())
@@ -78,7 +115,8 @@ fun App(
     val lifecycleOwner = LocalLifecycleOwner.current
 
     // Названия животных озвучивает системный синтезатор речи: в песочнице
-    // после звука ребёнок слышит слово. Сеть приложению для этого не нужна.
+    // после звука ребёнок слышит ласковое имя, а карточка показывает
+    // каноническое название. Сеть приложению для этого не нужна.
     val announcer = remember(context) { SpeechAnnouncer(context) }
     DisposableEffect(announcer) {
         onDispose { announcer.release() }
@@ -133,6 +171,7 @@ fun App(
         }
     }
 
+    val catalog = (catalogState as? CatalogState.Ready)?.catalog
     val animals = catalog?.animals.orEmpty()
 
     LaunchedEffect(catalog) {
@@ -147,40 +186,43 @@ fun App(
     // делает: родительская панель открывается только гейтом (три нажатия
     // по замку), а приложение закрывается кнопкой «Выйти» с подтверждением.
     // Ветку нельзя просто убрать — тогда Back закроет активность сам.
+    // Исключение — ошибка каталога: играть не во что, поэтому Back выходит.
     BackHandler {
         when {
             echoAnimal != null -> echoAnimal = null
             parentPanel -> parentPanel = false
+            catalogState is CatalogState.Failed -> onExitApp()
             screen != Screen.Sandbox -> screen = Screen.Sandbox
             else -> Unit
         }
     }
 
     Box(modifier = Modifier.fillMaxSize().background(Cream)) {
-        val loaded = catalog
-        when {
-            loaded == null -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-
-            loaded.animals.size < 2 -> Text(
-                text = "Не удалось загрузить каталог",
+        when (val state = catalogState) {
+            CatalogState.Loading -> CircularProgressIndicator(
                 modifier = Modifier.align(Alignment.Center),
             )
 
-            else -> {
-                val engine = remember(loaded, level) {
-                    SessionEngine(loaded.animals, requestedOptions = level + 1)
+            CatalogState.Failed -> CatalogLoadError(
+                onRetry = { loadAttempt++ },
+                onExit = onExitApp,
+            )
+
+            is CatalogState.Ready -> {
+                val engine = remember(state.catalog, level) {
+                    SessionEngine(state.catalog.animals, requestedOptions = level + 1)
                 }
 
                 when (screen) {
                     Screen.Sandbox -> SandboxScreen(
-                        animals = loaded.animals,
+                        animals = state.catalog.animals,
                         echoEnabled = echoEnabled,
                         preferredEchoAnimalId = echoAnimalId,
                         onAnimalSound = { animal ->
                             soundPlayer.play(animal.soundFile)
                             announcer.announceAfter(
                                 soundDurationMs = soundPlayer.durationMs(animal.soundFile),
-                                name = animal.name,
+                                narrationName = animal.narrationName,
                             )
                         },
                         onStartGame = { screen = Screen.Guess },
@@ -259,6 +301,65 @@ fun App(
                 soundPlayer = soundPlayer,
                 onDismiss = { echoAnimal = null },
             )
+        }
+    }
+}
+
+/**
+ * Читает каталог и превращает любую проблему в [CatalogState.Failed]:
+ * исключение из assets или каталог, из которого не собрать раунд.
+ */
+private suspend fun loadCatalog(repository: CatalogRepository): CatalogState =
+    runCatching { repository.load() }.fold(
+        onSuccess = { catalog ->
+            if (catalog.isPlayable()) {
+                CatalogState.Ready(catalog)
+            } else {
+                Log.w(TAG, "В каталоге меньше двух разных животных: ${catalog.animals.size}")
+                CatalogState.Failed
+            }
+        },
+        onFailure = { error ->
+            Log.w(TAG, "Каталог не загрузился", error)
+            CatalogState.Failed
+        },
+    )
+
+/**
+ * Каталог не загрузился или в нём слишком мало животных.
+ *
+ * Вместо вечного индикатора — понятное объяснение, «Повторить» и «Выйти»:
+ * приложение не должно запирать ребёнка с родителем на пустом экране.
+ */
+@Composable
+private fun CatalogLoadError(
+    onRetry: () -> Unit,
+    onExit: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier.fillMaxSize().padding(24.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            text = "Не удалось загрузить животных",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Medium,
+            color = Ink,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(modifier = Modifier.height(20.dp))
+        Button(
+            onClick = onRetry,
+            modifier = Modifier.heightIn(min = 56.dp),
+            shape = RoundedCornerShape(24.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Sunny, contentColor = Ink),
+        ) {
+            Text(text = "Повторить", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        }
+        TextButton(onClick = onExit) {
+            Text(text = "Выйти", fontSize = 16.sp, color = Ink)
         }
     }
 }

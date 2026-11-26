@@ -8,6 +8,7 @@ import android.media.AudioAttributes
 import android.media.MediaPlayer
 import android.media.MediaRecorder
 import android.os.Build
+import android.os.SystemClock
 import android.util.Log
 import androidx.core.content.ContextCompat
 import java.io.File
@@ -37,6 +38,12 @@ class EchoRecorder(context: Context) {
     private var player: MediaPlayer? = null
     private var outputFile: File? = null
 
+    /** Система остановила запись по лимиту: повторный stop() бросит исключение. */
+    private var reachedMaxDuration = false
+
+    /** Момент старта: по нему отличаем лимит от слишком короткой записи. */
+    private var startedAtElapsedMs = 0L
+
     var isRecording: Boolean = false
         private set
 
@@ -57,6 +64,7 @@ class EchoRecorder(context: Context) {
         EchoFiles.deleteAll(dir)
         val file = File(dir, "echo_${System.currentTimeMillis()}.m4a")
         val mediaRecorder = createRecorder()
+        reachedMaxDuration = false
 
         return try {
             mediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC)
@@ -66,12 +74,20 @@ class EchoRecorder(context: Context) {
             mediaRecorder.setAudioSamplingRate(44_100)
             mediaRecorder.setAudioEncodingBitRate(96_000)
             mediaRecorder.setMaxDuration(ECHO_MAX_DURATION_MS.toInt())
+            // На лимите запись останавливает система, и тогда stop() падает.
+            // Запоминаем событие, чтобы не выбросить нормальную запись.
+            mediaRecorder.setOnInfoListener { _, what, _ ->
+                if (what == MediaRecorder.MEDIA_RECORDER_INFO_MAX_DURATION_REACHED) {
+                    reachedMaxDuration = true
+                }
+            }
             mediaRecorder.setOutputFile(file.absolutePath)
             mediaRecorder.prepare()
             mediaRecorder.start()
 
             recorder = mediaRecorder
             outputFile = file
+            startedAtElapsedMs = SystemClock.elapsedRealtime()
             isRecording = true
             true
         } catch (error: Exception) {
@@ -85,19 +101,39 @@ class EchoRecorder(context: Context) {
     /**
      * Останавливает запись. Возвращает файл или null, если запись слишком
      * короткая/не началась. Файл живёт до [release] или следующего старта.
+     *
+     * Запись, которую система остановила по лимиту длительности, тоже
+     * возвращается: файл при этом целый, а `stop()` на уже остановленном
+     * рекордере падает — это проверяет
+     * [shouldKeepEchoRecording].
      */
     fun stop(): File? {
         val mediaRecorder = recorder ?: return null
         recorder = null
         isRecording = false
         val file = outputFile
+        val elapsedMs = if (startedAtElapsedMs > 0L) {
+            (SystemClock.elapsedRealtime() - startedAtElapsedMs).coerceAtLeast(0L)
+        } else {
+            0L
+        }
+        val stoppedByLimit = reachedMaxDuration
+        startedAtElapsedMs = 0L
 
         val stopped = runCatching { mediaRecorder.stop() }
             .onFailure { Log.w(TAG, "Запись не сохранилась (слишком короткая?)", it) }
             .isSuccess
         runCatching { mediaRecorder.release() }
 
-        return if (stopped && file?.isFile == true) {
+        val fileBytes = file?.takeIf { it.isFile }?.length() ?: 0L
+        val keep = file != null && shouldKeepEchoRecording(
+            stopSucceeded = stopped,
+            stoppedByLimit = stoppedByLimit,
+            elapsedMs = elapsedMs,
+            fileBytes = fileBytes,
+        )
+
+        return if (keep) {
             file
         } else {
             file?.delete()

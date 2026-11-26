@@ -14,11 +14,12 @@ import java.util.Locale
  * Называет животное после того, как доиграл его звук: в песочнице ребёнок
  * слышит связку «образ — звук — название» и запоминает слово.
  *
- * Фраза строится как «Это слон»: так она звучит по-человечески и мягче,
- * чем одно слово. Голос — системный синтезатор речи: приложение по-прежнему
- * не просит `INTERNET` и ничего не отправляет наружу. Если движка или русского
- * голоса в системе нет, озвучка тихо пропускается, а звук животного играет как
- * обычно. Новый тап отменяет и предыдущую фразу, и текущую.
+ * Фраза строится как «Это слоник!»: ласковое имя из каталога делает её
+ * теплее, а замедленная речь помогает ребёнку разобрать название почти по
+ * слогам. Голос — системный синтезатор речи: приложение по-прежнему не
+ * просит `INTERNET` и ничего не отправляет наружу. Если движка или русского
+ * голоса в системе нет, озвучка тихо пропускается, а звук животного играет
+ * как обычно. Новый тап отменяет и предыдущую фразу, и текущую.
  */
 class SpeechAnnouncer(context: Context) : TextToSpeech.OnInitListener {
 
@@ -107,14 +108,14 @@ class SpeechAnnouncer(context: Context) : TextToSpeech.OnInitListener {
     }
 
     /**
-     * Планирует «Это <животное>» сразу после его звука и короткой паузы.
+     * Планирует «Это <ласковое имя>!» сразу после звука и короткой паузы.
      * Если ребёнок нажал другую карточку, предыдущая фраза отменяется.
      */
-    fun announceAfter(soundDurationMs: Long, name: String) {
-        if (name.isBlank() || released) return
+    fun announceAfter(soundDurationMs: Long, narrationName: String) {
+        if (narrationName.isBlank() || released) return
         val engine = tts ?: return
         handler.removeCallbacks(speakTask)
-        pendingPhrase = narrationPhrase(name)
+        pendingPhrase = narrationPhrase(narrationName)
         engine.stop()
         handler.postDelayed(speakTask, narrationDelayMs(soundDurationMs))
     }
@@ -140,7 +141,9 @@ class SpeechAnnouncer(context: Context) : TextToSpeech.OnInitListener {
         const val TAG = "SpeechAnnouncer"
         const val UTTERANCE_ID = "animal-intro"
         const val READY_RETRY_MS = 150L
-        const val SPEECH_RATE = 0.92f
+        // Заметно медленнее обычного: название звучит почти по слогам,
+        // но фраза не растягивается до невнятности.
+        const val SPEECH_RATE = 0.70f
         const val SPEECH_PITCH = 1.08f
 
         /**
@@ -160,11 +163,12 @@ class SpeechAnnouncer(context: Context) : TextToSpeech.OnInitListener {
 }
 
 /**
- * Фраза для озвучки: «Это слон», «Это петух». Названия в каталоге —
- * нарицательные, поэтому после «Это» они пишутся со строчной буквы.
+ * Тёплая фраза для озвучки: «Это слоник!», «Это петушок!». Названия в
+ * каталоге — нарицательные, поэтому после «это» они пишутся со строчной
+ * буквы. Восклицание помогает синтезатору сказать фразу живее.
  */
 internal fun narrationPhrase(name: String): String {
     val trimmed = name.trim()
     if (trimmed.isEmpty()) return ""
-    return "Это " + trimmed.lowercase(Locale.ROOT)
+    return "Это " + trimmed.lowercase(Locale.ROOT) + "!"
 }

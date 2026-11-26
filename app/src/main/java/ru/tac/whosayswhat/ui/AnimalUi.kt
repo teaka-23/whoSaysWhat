@@ -2,8 +2,11 @@ package ru.tac.whosayswhat.ui
 
 import android.content.Context
 import android.graphics.BitmapFactory
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -33,6 +36,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -41,6 +46,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import ru.tac.whosayswhat.data.Animal
 import ru.tac.whosayswhat.ui.theme.Ink
+import ru.tac.whosayswhat.ui.theme.Mint
+import ru.tac.whosayswhat.ui.theme.Teal
 import kotlin.math.roundToInt
 
 /**
@@ -86,6 +93,7 @@ fun AnimalCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     shakeKey: Int = 0,
+    feedback: GuessFeedback = GuessFeedback.None,
     onClickLabel: String = "Послушать ${animal.name}",
 ) {
     val shake = remember { Animatable(0f) }
@@ -95,6 +103,24 @@ fun AnimalCard(
         targetValue = if (pressed) 0.96f else 1f,
         animationSpec = tween(durationMillis = 90),
         label = "animalCardPressScale",
+    )
+    // Верный ответ подтверждается цветом рамки и лёгким «прыжком»: карточка
+    // не должна выглядеть так же, как до нажатия, пока идёт похвала.
+    val confirmed = feedback == GuessFeedback.Correct
+    val borderColor by animateColorAsState(
+        targetValue = if (confirmed) Teal else Ink.copy(alpha = 0.08f),
+        animationSpec = tween(durationMillis = 180),
+        label = "animalCardBorder",
+    )
+    val containerColor by animateColorAsState(
+        targetValue = if (confirmed) Mint.copy(alpha = 0.35f) else Color.White,
+        animationSpec = tween(durationMillis = 180),
+        label = "animalCardContainer",
+    )
+    val confirmScale by animateFloatAsState(
+        targetValue = if (confirmed) 1.05f else 1f,
+        animationSpec = spring(dampingRatio = 0.5f, stiffness = Spring.StiffnessMediumLow),
+        label = "animalCardConfirmScale",
     )
 
     LaunchedEffect(shakeKey) {
@@ -108,14 +134,15 @@ fun AnimalCard(
     Card(
         modifier = modifier
             .graphicsLayer {
-                scaleX = pressScale
-                scaleY = pressScale
+                val scale = pressScale * confirmScale
+                scaleX = scale
+                scaleY = scale
             }
             .offset { IntOffset(shake.value.roundToInt(), 0) },
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = containerColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        border = BorderStroke(3.dp, Ink.copy(alpha = 0.08f)),
+        border = BorderStroke(if (confirmed) 4.dp else 3.dp, borderColor),
     ) {
         Box(
             modifier = Modifier
@@ -127,6 +154,15 @@ fun AnimalCard(
                     onClickLabel = onClickLabel,
                     onClick = onClick,
                 )
+                // Слабовидящему ребёнку цвет ничего не говорит: исход нажатия
+                // объявляет TalkBack.
+                .semantics {
+                    when (feedback) {
+                        GuessFeedback.Correct -> stateDescription = "Верно"
+                        GuessFeedback.Wrong -> stateDescription = "Не то, попробуй ещё"
+                        GuessFeedback.None -> Unit
+                    }
+                }
                 .padding(12.dp),
             contentAlignment = Alignment.Center,
         ) {

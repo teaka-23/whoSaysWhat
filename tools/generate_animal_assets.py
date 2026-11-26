@@ -736,19 +736,17 @@ def horse():
     c.eye(202, 254)
     c.eye(310, 254)
 
-    muzzle = (190, 302, 322, 438)
+    muzzle = (198, 300, 314, 438)
     c.ellipse(*muzzle, fill=BEIGE, outline=INK, width=5)
     muzzle_mask = c.inset(c.shape_mask_ellipse(*muzzle), 2)
-    c.highlight(muzzle_mask, (204, 316, 274, 354), (255, 255, 255, 95))
-    c.ellipse(220, 344, 238, 362, fill=DARK_BROWN, outline=None, width=0)
-    c.ellipse(274, 344, 292, 362, fill=DARK_BROWN, outline=None, width=0)
-    c.arc(230, 362, 282, 406, 20, 160, width=5)
-    c.ellipse(246, 396, 266, 414, fill=ROSE, outline=None, width=0)
+    c.highlight(muzzle_mask, (208, 314, 276, 352), (255, 255, 255, 95))
+    # Ноздри — широкие овалы по бокам морды: круглые точки в центре
+    # делали из морды коровью, а узкие щели — человеческий нос.
+    c.ellipse(220, 352, 244, 374, fill=DARK_BROWN, outline=None, width=0)
+    c.ellipse(270, 352, 294, 374, fill=DARK_BROWN, outline=None, width=0)
+    c.arc(232, 376, 280, 414, 20, 160, width=5)
+    c.ellipse(246, 404, 266, 420, fill=ROSE, outline=None, width=0)
     c.ellipse(*head, fill=None, outline=INK, width=6)
-
-    # Блики на гриве.
-    for x, y in ((150, 260), (366, 260), (344, 360), (166, 360)):
-        c.arc(x - 22, y - 18, x + 22, y + 24, 100, 250, fill=(130, 100, 85, 255), width=4)
     return c
 
 
@@ -757,21 +755,43 @@ def rooster():
     c = Canvas()
     c.ground_shadow(118, 444, 394, 496, opacity=26)
 
-    # Хвост веером.
-    c.blob([(326, 350), (394, 110), (454, 148), (420, 300), (380, 382)], DARK_GREEN)
-    c.blob([(318, 352), (438, 182), (492, 236), (420, 356), (368, 392)], GREEN)
-    c.blob([(312, 352), (382, 238), (446, 316), (390, 396)], (46, 125, 50, 255))
-    for points in (
-        [(350, 320), (410, 170), (442, 186)],
-        [(346, 330), (430, 228), (456, 260)],
-    ):
-        c.line(points, fill=(30, 90, 45, 255), width=4)
+    # Хвост — веер из узких серповидных перьев разного цвета: по нему
+    # петуха узнают с первого взгляда, в отличие от «листиков».
+    origin = (352, 386)
 
-    # Лапки.
+    def sickle(tip, thickness, color):
+        ox, oy = origin
+        dx, dy = tip[0] - ox, tip[1] - oy
+        length = math.hypot(dx, dy)
+        px, py = -dy / length, dx / length
+        bulge = thickness * 0.7
+        inner = thickness * 1.35
+        mid_x = ox + dx * 0.58 + px * bulge
+        mid_y = oy + dy * 0.58 + py * bulge
+        near_x = ox + dx * 0.2 + px * bulge * 0.7
+        near_y = oy + dy * 0.2 + py * bulge * 0.7
+        points = [
+            (ox + px * thickness * 0.42, oy + py * thickness * 0.42),
+            (near_x, near_y),
+            (mid_x, mid_y),
+            (tip[0] - px * thickness * 0.12, tip[1] - py * thickness * 0.12),
+            (mid_x - px * inner, mid_y - py * inner),
+            (ox - px * thickness * 0.42, oy - py * thickness * 0.42),
+        ]
+        c.blob(points, color, width=5)
+
+    sickle((356, 62), 50, DARK_GREEN)
+    sickle((424, 84), 48, (46, 125, 50, 255))
+    sickle((474, 158), 44, TEAL)
+    sickle((496, 242), 40, DEEP_ORANGE)
+    sickle((486, 328), 34, RED)
+
+    # Лапки: толстые, с тремя пальцами — иначе в маленьком размере
+    # от ног остаются две ниточки.
     for x in (202, 282):
-        c.line([(x, 438), (x, 482)], fill=DEEP_ORANGE, width=9)
-        c.line([(x, 482), (x - 24, 492)], fill=DEEP_ORANGE, width=7)
-        c.line([(x, 482), (x + 24, 492)], fill=DEEP_ORANGE, width=7)
+        c.line([(x, 438), (x, 484)], fill=DEEP_ORANGE, width=13)
+        for dx in (-26, 0, 26):
+            c.line([(x, 484), (x + dx, 496)], fill=DEEP_ORANGE, width=9)
 
     body = (112, 270, 400, 470)
     c.ellipse(*body, fill=ROOSTER_CREAM)
@@ -779,11 +799,34 @@ def rooster():
     c.shade(body_mask, (118, 382, 400, 480), (30, 40, 50, 38))
     c.highlight(body_mask, (154, 292, 300, 352), (255, 255, 255, 100))
 
-    # Крыло.
-    wing = (138, 302, 296, 428)
-    c.ellipse(*wing, fill=BEIGE, outline=INK, width=5)
-    c.arc(166, 328, 274, 402, 200, 340, fill=BROWN, width=4)
-    c.arc(166, 350, 252, 414, 200, 320, fill=BROWN, width=3)
+    # Крыло — сложенное «рукавом» на боку, как у остальных птиц: круг
+    # посреди грудки читался как ещё один глаз.
+    wing = [(186, 306), (146, 322), (128, 366), (134, 418), (176, 442), (200, 412)]
+    c.blob(wing, (230, 190, 140, 255), width=4)
+    wing_mask = c.inset(c.shape_mask_blob(wing), 2)
+    c.clip(
+        wing_mask,
+        lambda d, _layer: [
+            d.arc(
+                c.box(136, y, 204, y + 30),
+                200,
+                340,
+                fill=(198, 152, 104, 255),
+                width=scaled(3),
+            )
+            for y in (372, 404)
+        ],
+    )
+    c.arc(154, 330, 226, 378, 200, 340, fill=(248, 220, 184, 255), width=4)
+
+    # Гребешок — один сплошной красный «берет» с четырьмя выступами:
+    # так нет швов между кружками. Рисуем до головы, чтобы край ушёл под неё.
+    c.blob(
+        [(182, 90), (174, 48), (200, 26), (222, 48), (238, 20), (262, 18),
+         (272, 46), (292, 24), (316, 42), (324, 70), (332, 90), (292, 80), (230, 80)],
+        RED,
+        width=5,
+    )
 
     head = (166, 76, 346, 282)
     c.ellipse(*head, fill=ROOSTER_CREAM, outline=None, width=0)
@@ -791,18 +834,19 @@ def rooster():
     c.shade(head_mask, (184, 196, 342, 292), (30, 40, 50, 26))
     c.highlight(head_mask, (190, 100, 302, 168), (255, 255, 255, 85))
 
-    # Гребешок.
-    for left, top in ((180, 46), (218, 28), (256, 28), (294, 46)):
-        c.ellipse(left, top, left + 52, top + 70, fill=RED, width=5)
-
     c.eye(214, 170)
     c.eye(294, 170)
     c.blush(176, 206, 220, 238)
     c.blush(288, 206, 332, 238)
 
     c.polygon([(216, 202), (292, 202), (254, 250)], fill=YELLOW, outline=INK, width=4)
-    c.ellipse(246, 238, 262, 292, fill=RED, outline=INK, width=4)
-    c.arc(230, 248, 278, 274, 20, 160, width=3)
+    # Серёжка: два узких красных лепестка под клювом. Если начать её выше,
+    # она слипается с клювом и читается как язык.
+    c.blob(
+        [(238, 252), (272, 252), (274, 282), (262, 306), (256, 292), (250, 306), (236, 282)],
+        RED,
+        width=4,
+    )
     c.ellipse(*head, fill=None, outline=INK, width=6)
 
     # Пёрышки на груди.
@@ -940,23 +984,22 @@ def goat():
         c.ellipse(left, 442, left + 60, 504, fill=GOAT_CREAM, outline=INK, width=4)
         c.line([(left + 14, 478), (left + 14, 496)], width=3)
 
-    # Длинные уши.
-    c.blob([(150, 230), (92, 232), (64, 292), (82, 354), (130, 342), (162, 286)], GOAT_CREAM)
-    c.blob([(362, 230), (420, 232), (448, 292), (430, 354), (382, 342), (350, 286)], GOAT_CREAM)
-    c.blob([(136, 250), (98, 254), (82, 294), (96, 330), (128, 320), (148, 284)], PEACH, outline=None)
-    c.blob([(376, 250), (414, 254), (430, 294), (416, 330), (384, 320), (364, 284)], PEACH, outline=None)
+    # Уши — чуть меньше и не такие «лопухи».
+    c.blob([(152, 232), (100, 236), (80, 288), (94, 336), (136, 326), (164, 284)], GOAT_CREAM)
+    c.blob([(360, 232), (412, 236), (432, 288), (418, 336), (376, 326), (348, 284)], GOAT_CREAM)
+    c.blob([(140, 250), (108, 256), (94, 292), (106, 320), (134, 312), (150, 282)], PEACH, outline=None)
+    c.blob([(372, 250), (404, 256), (418, 292), (406, 320), (378, 312), (362, 282)], PEACH, outline=None)
 
-    # Рожки.
-    c.blob(
-        [(194, 142), (174, 100), (154, 62), (146, 30), (168, 24), (190, 52), (204, 100), (212, 142)],
-        HORN,
-    )
-    c.blob(
-        [(318, 142), (338, 100), (358, 62), (366, 30), (344, 24), (322, 52), (308, 100), (300, 142)],
-        HORN,
-    )
-    for x, y in ((164, 50), (176, 76), (346, 50), (334, 76)):
-        c.arc(x - 14, y - 8, x + 14, y + 10, 190, 350, fill=(150, 132, 128, 255), width=3)
+    # Рога — загнутые назад и заметно темнее шерсти, иначе их не видно.
+    for horn in (
+        [(190, 152), (180, 116), (168, 80), (152, 50), (138, 32), (156, 24),
+         (176, 42), (194, 74), (206, 114), (212, 152)],
+        [(320, 152), (330, 116), (342, 80), (358, 50), (372, 32), (354, 24),
+         (334, 42), (316, 74), (304, 114), (298, 152)],
+    ):
+        c.blob(horn, (150, 128, 120, 255), width=4)
+    for x, y in ((166, 56), (180, 88), (338, 56), (324, 88)):
+        c.line([(x - 9, y - 5), (x + 9, y + 5)], fill=(184, 162, 152, 255), width=3)
 
     head = (158, 104, 354, 394)
     c.ellipse(*head, fill=GOAT_CREAM, outline=None, width=0)
@@ -964,28 +1007,26 @@ def goat():
     c.shade(head_mask, (190, 286, 360, 402), (90, 60, 45, 30))
     c.highlight(head_mask, (180, 132, 300, 210), (255, 255, 255, 75))
 
-    # Чубчик.
-    for points in (
-        [(224, 132), (216, 100), (240, 116)],
-        [(246, 128), (252, 92), (264, 120)],
-        [(270, 132), (288, 104), (286, 136)],
-    ):
-        c.blob(points, GOAT_CREAM, width=4)
+    # Чубчик не рисуем: три светлых пера между рогами читались как корона.
 
     c.blush(176, 272, 228, 308)
     c.blush(288, 272, 340, 308)
     c.eye(210, 238)
     c.eye(302, 238)
 
-    # Мордочка и бородка.
+    # Мордочка и бородка. Бородку рисуем до мордочки: её верх уходит под
+    # мордочку, и борода свисает с подбородка, а не поверх улыбки.
+    c.blob(
+        [(238, 358), (274, 358), (273, 416), (263, 446), (256, 422), (249, 446), (239, 416)],
+        (216, 194, 150, 255),
+        width=4,
+    )
+    c.line([(254, 396), (254, 418)], fill=(186, 162, 124, 255), width=3)
     c.ellipse(198, 286, 314, 382, fill=CREAM, outline=None, width=0)
     c.ellipse(230, 316, 282, 354, fill=ROSE, outline=None, width=0)
     c.ellipse(242, 326, 252, 338, fill=INK, outline=None, width=0)
     c.ellipse(260, 326, 270, 338, fill=INK, outline=None, width=0)
     c.arc(236, 334, 278, 362, 20, 160, width=4)
-    c.blob([(228, 368), (284, 368), (276, 420), (256, 442), (236, 420)], GOAT_CREAM, width=4)
-    for x in (244, 256, 268):
-        c.line([(x, 390), (x, 418)], width=3)
     c.ellipse(*head, fill=None, outline=INK, width=6)
     return c
 
@@ -1315,18 +1356,33 @@ def bee():
 
 def turkey():
     c = Canvas()
-    c.ground_shadow(114, 446, 398, 500, opacity=26)
+    c.ground_shadow(108, 444, 402, 502, opacity=26)
 
-    # Хвост-веер: широкие перья внахлёст, чтобы веер читался сплошным.
-    cx, cy = 256, 376
-    inner, outer = 50, 200
-    colors = (TURKEY_TAN, TURKEY_BROWN, TURKEY_DARK, TURKEY_TAN, TURKEY_BROWN, TURKEY_TAN, TURKEY_DARK, TURKEY_BROWN)
-    for index, angle in enumerate(range(-84, 85, 24)):
+    # Хвост-веер: крупные перья с «глазками» на концах. Веер шире головы,
+    # поэтому даже на маленькой карточке читается как главный признак индюка.
+    cx, cy = 256, 350
+    inner, outer = 42, 216
+    colors = (
+        TURKEY_TAN,
+        (207, 151, 108, 255),
+        TURKEY_BROWN,
+        (176, 112, 84, 255),
+        TURKEY_TAN,
+        (214, 158, 112, 255),
+        TURKEY_BROWN,
+        (176, 112, 84, 255),
+        TURKEY_TAN,
+        (207, 151, 108, 255),
+        TURKEY_BROWN,
+        (176, 112, 84, 255),
+        TURKEY_TAN,
+    )
+    for index, angle in enumerate(range(-96, 97, 16)):
         theta = math.radians(angle - 90)
         dx, dy = math.cos(theta), math.sin(theta)
         nx, ny = -dy, dx
-        half_base = 26
-        half_tip = 44
+        half_base = 22
+        half_tip = 38
         points = [
             (cx + dx * inner + nx * half_base, cy + dy * inner + ny * half_base),
             (cx + dx * outer + nx * half_tip, cy + dy * outer + ny * half_tip),
@@ -1334,55 +1390,67 @@ def turkey():
             (cx + dx * inner - nx * half_base, cy + dy * inner - ny * half_base),
         ]
         c.blob(points, colors[index % len(colors)], width=5)
+        spot_x = cx + dx * (outer - 30)
+        spot_y = cy + dy * (outer - 30)
         c.ellipse(
-            cx + dx * (outer - 8) - 9,
-            cy + dy * (outer - 8) - 9,
-            cx + dx * (outer - 8) + 9,
-            cy + dy * (outer - 8) + 9,
-            fill=TURKEY_DARK if index % 2 else TURKEY_TAN,
+            spot_x - 14,
+            spot_y - 14,
+            spot_x + 14,
+            spot_y + 14,
+            fill=TURKEY_DARK if index % 2 else (238, 180, 120, 255),
             outline=INK,
-            width=2,
+            width=3,
         )
 
     # Лапки.
-    for x in (204, 286):
-        c.line([(x, 430), (x, 484)], fill=DEEP_ORANGE, width=8)
-        c.line([(x, 484), (x - 22, 496)], fill=DEEP_ORANGE, width=6)
-        c.line([(x, 484), (x + 22, 496)], fill=DEEP_ORANGE, width=6)
+    for x in (204, 292):
+        c.line([(x, 438), (x, 488)], fill=DEEP_ORANGE, width=8)
+        c.line([(x, 488), (x - 24, 500)], fill=DEEP_ORANGE, width=6)
+        c.line([(x, 488), (x + 24, 500)], fill=DEEP_ORANGE, width=6)
 
-    # Туловище — простое, как у остальных зверей.
-    body = (116, 318, 396, 486)
+    # Туловище ниже и уже головы, чтобы веер оставался виден по сторонам.
+    body = (124, 326, 388, 492)
     c.ellipse(*body, fill=TURKEY_BROWN)
     body_mask = c.inset(c.shape_mask_ellipse(*body), 3)
-    c.shade(body_mask, (122, 424, 396, 496), (30, 40, 50, 40))
-    c.highlight(body_mask, (156, 336, 296, 380), (255, 255, 255, 60))
+    c.ellipse(184, 374, 328, 502, fill=TURKEY_TAN, outline=None, width=0)
+    c.shade(body_mask, (130, 432, 388, 502), (30, 40, 50, 40))
+    c.highlight(body_mask, (158, 344, 298, 388), (255, 255, 255, 60))
 
     # Крыло.
-    c.ellipse(140, 372, 268, 470, fill=TURKEY_TAN, outline=INK, width=5)
-    for y in (404, 430):
-        c.arc(160, y, 250, y + 24, 200, 340, fill=TURKEY_BROWN, width=3)
+    c.ellipse(134, 350, 280, 470, fill=TURKEY_TAN, outline=INK, width=5)
+    for y in (384, 412, 440):
+        c.arc(152, y, 264, y + 24, 200, 340, fill=TURKEY_BROWN, width=3)
 
     # Пёрышки на груди справа.
-    for y in (392, 420):
-        c.arc(292, y, 352, y + 26, 20, 160, fill=TURKEY_TAN, width=3)
+    for y in (390, 418):
+        c.arc(296, y, 356, y + 26, 20, 160, fill=TURKEY_TAN, width=3)
 
-    # Крупная голова прямо на туловище.
-    head = (150, 108, 362, 320)
+    # Голова: крупная, но не закрывает весь веер.
+    head = (154, 84, 358, 326)
     c.ellipse(*head, fill=TURKEY_BROWN, outline=None, width=0)
     head_mask = c.inset(c.shape_mask_ellipse(*head), 3)
-    c.shade(head_mask, (178, 272, 346, 330), (40, 46, 54, 26))
-    c.highlight(head_mask, (176, 128, 258, 190), (255, 255, 255, 60))
+    c.shade(head_mask, (180, 278, 350, 336), (40, 46, 54, 26))
+    c.highlight(head_mask, (178, 108, 264, 172), (255, 255, 255, 65))
 
-    c.blush(172, 226, 210, 256, opacity=70)
-    c.blush(302, 226, 340, 256, opacity=70)
-    c.eye(216, 198)
-    c.eye(296, 198)
+    c.blush(168, 222, 208, 256, opacity=70)
+    c.blush(304, 222, 344, 256, opacity=70)
+    c.eye(212, 204)
+    c.eye(300, 204)
 
-    # Клюв, кожистый нарост на клюве и серёжка под клювом. Нарост рисуется
-    # до клюва: торчит над ним и уходит под него, а не режет клюв пополам.
-    c.ellipse(230, 190, 254, 254, fill=RED, outline=INK, width=4)
-    c.polygon([(224, 234), (288, 234), (256, 282)], fill=YELLOW, outline=INK, width=4)
-    c.ellipse(250, 278, 278, 316, fill=RED, outline=INK, width=4)
+    # Красный нарост над клювом рисуется до клюва, серёжка — после.
+    c.blob(
+        [(246, 206), (266, 206), (274, 248), (256, 270), (238, 248)],
+        RED,
+        width=4,
+    )
+    c.polygon([(220, 250), (292, 250), (256, 308)], fill=YELLOW, outline=INK, width=4)
+    c.ellipse(242, 274, 248, 280, fill=DEEP_ORANGE, outline=None, width=0)
+    c.ellipse(264, 274, 270, 280, fill=DEEP_ORANGE, outline=None, width=0)
+    c.blob(
+        [(234, 302), (278, 302), (284, 342), (256, 366), (228, 342)],
+        RED,
+        width=4,
+    )
     c.ellipse(*head, fill=None, outline=INK, width=6)
     return c
 
@@ -1465,59 +1533,60 @@ def wolf():
         c.line([(left + 18, 480), (left + 18, 498)], width=3)
         c.line([(left + 42, 476), (left + 42, 498)], width=3)
 
-    # Уши — до головы, чтобы их основания ушли под контур.
+    # Уши — до головы, чтобы их основания ушли под контур. Внутри тёмная
+    # шерсть, а не розовая: розовые ушки сразу делают из волка кошку.
     left_ear = [(100, 242), (104, 54), (214, 142), (224, 226)]
     right_ear = [(412, 242), (408, 54), (298, 142), (288, 226)]
     for ear, inner in (
-        (left_ear, [(124, 216), (130, 92), (196, 158), (202, 212)]),
-        (right_ear, [(388, 216), (382, 92), (316, 158), (310, 212)]),
+        (left_ear, [(126, 212), (132, 96), (194, 158), (200, 208)]),
+        (right_ear, [(386, 212), (380, 96), (318, 158), (312, 208)]),
     ):
         c.blob(ear, WOLF_GRAY)
-        c.blob(inner, PEACH, outline=None)
-    c.blob([(106, 102), (104, 62), (142, 84), (146, 124)], WOLF_DARK, width=4)
-    c.blob([(406, 102), (408, 62), (370, 84), (366, 124)], WOLF_DARK, width=4)
+        c.blob(inner, WOLF_DARK, outline=INK, width=3)
+    c.blob([(106, 102), (104, 62), (142, 84), (146, 124)], (74, 84, 92, 255), width=4)
+    c.blob([(406, 102), (408, 62), (370, 84), (366, 124)], (74, 84, 92, 255), width=4)
 
     head = (112, 132, 400, 424)
     c.ellipse(*head, fill=WOLF_GRAY, outline=None, width=0)
     head_mask = c.inset(c.shape_mask_ellipse(*head), 3)
 
     def wolf_markings(d, _layer):
-        d.ellipse(c.box(120, 268, 192, 364), fill=WOLF_LIGHT)
-        d.ellipse(c.box(320, 268, 392, 364), fill=WOLF_LIGHT)
-        d.ellipse(c.box(232, 136, 280, 218), fill=WOLF_DARK)
-        d.ellipse(c.box(176, 224, 228, 276), fill=WOLF_LIGHT)
-        d.ellipse(c.box(284, 224, 336, 276), fill=WOLF_LIGHT)
+        # Светлые пятна вокруг глаз узкие: широкие читались как маска енота.
+        d.ellipse(c.box(172, 220, 234, 292), fill=WOLF_LIGHT)
+        d.ellipse(c.box(278, 220, 340, 292), fill=WOLF_LIGHT)
 
     c.clip(head_mask, wolf_markings)
     c.shade(head_mask, (196, 300, 402, 432), (30, 40, 50, 30))
     c.highlight(head_mask, (148, 156, 286, 226), (255, 255, 255, 85))
 
-    # Чубчик и брови.
-    for x, dx in ((232, -6), (256, 0), (280, 6)):
-        c.line([(x, 148), (x + dx, 118)], width=4)
-    c.line([(180, 214), (220, 204)], width=4)
-    c.line([(332, 214), (292, 204)], width=4)
+    # Сердитые брови — «не кошка».
+    c.line([(182, 206), (222, 220)], width=4)
+    c.line([(330, 206), (290, 220)], width=4)
 
     c.blush(140, 300, 196, 336)
     c.blush(316, 300, 372, 336)
     c.eye(202, 256)
     c.eye(310, 256)
 
-    muzzle = (186, 292, 326, 406)
+    muzzle = (196, 296, 316, 414)
     c.ellipse(*muzzle, fill=WOLF_LIGHT, outline=INK, width=5)
     muzzle_mask = c.inset(c.shape_mask_ellipse(*muzzle), 2)
-    c.highlight(muzzle_mask, (200, 306, 274, 342), (255, 255, 255, 90))
-    c.polygon([(238, 308), (274, 308), (256, 338)], fill=INK, outline=INK, width=4)
-    c.arc(236, 334, 256, 362, 0, 90, width=4)
-    c.arc(256, 334, 276, 362, 90, 180, width=4)
-    c.arc(244, 352, 268, 378, 20, 160, width=4)
+    c.highlight(muzzle_mask, (208, 310, 274, 344), (255, 255, 255, 90))
+    # Волчий нос — крупный и тёмный, с чёткой спинкой.
+    c.blob(
+        [(230, 306), (282, 306), (274, 336), (238, 336)],
+        (68, 70, 78, 255),
+        width=4,
+    )
+    c.ellipse(242, 312, 272, 322, fill=(120, 124, 134, 255), outline=None, width=0)
+    # Пасть: вертикальная линия и два уголка, чтобы улыбка не была кошачьей.
+    c.line([(256, 336), (256, 366)], width=4)
+    c.arc(228, 348, 258, 384, 0, 90, width=4)
+    c.arc(254, 348, 284, 384, 90, 180, width=4)
+    # Два клыка — волка узнают по зубам.
+    c.polygon([(232, 356), (244, 356), (238, 382)], fill=WHITE, outline=INK, width=3)
+    c.polygon([(268, 356), (280, 356), (274, 382)], fill=WHITE, outline=INK, width=3)
 
-    # Пушистые «бакенбарды» поверх контура — силуэт волка, а не кошки.
-    for points in (
-        [(130, 292), (100, 312), (122, 330), (98, 350), (132, 348), (122, 372), (154, 350)],
-        [(382, 292), (412, 312), (390, 330), (414, 350), (380, 348), (390, 372), (358, 350)],
-    ):
-        c.blob(points, WOLF_LIGHT, width=4)
     c.ellipse(*head, fill=None, outline=INK, width=6)
     return c
 
@@ -1572,118 +1641,159 @@ def bear():
 
 def crow():
     c = Canvas()
-    c.ground_shadow(118, 448, 398, 500, opacity=26)
+    c.ground_shadow(128, 430, 388, 490, opacity=28)
 
-    # Хвост.
-    c.blob([(332, 408), (452, 432), (470, 468), (372, 470)], CROW_DARK, width=5)
-    c.line([(392, 438), (448, 456)], fill=CROW_GLOSS, width=3)
-    c.line([(380, 452), (430, 464)], fill=CROW_GLOSS, width=3)
+    # Хвост — два пера, торчащих из-под туловища вниз-в стороны.
+    for points in (
+        [(212, 400), (124, 436), (100, 486), (168, 480), (228, 444)],
+        [(300, 400), (388, 436), (412, 486), (344, 480), (284, 444)],
+    ):
+        c.blob(points, CROW_DARK, width=5)
+        c.line([(148, 460), (214, 430)], fill=CROW_GLOSS, width=3)
 
-    # Лапки.
-    for x in (208, 286):
-        c.line([(x, 448), (x, 486)], fill=(116, 122, 128, 255), width=7)
-        c.line([(x, 486), (x - 20, 498)], fill=(116, 122, 128, 255), width=5)
-        c.line([(x, 486), (x + 20, 498)], fill=(116, 122, 128, 255), width=5)
+    # Лапки: серые, с длинными когтями — птичья примета.
+    for x in (222, 290):
+        c.line([(x, 440), (x, 486)], fill=(126, 132, 140, 255), width=17)
+        c.line([(x, 486), (x - 32, 498)], fill=(126, 132, 140, 255), width=11)
+        c.line([(x, 486), (x + 32, 498)], fill=(126, 132, 140, 255), width=11)
+        c.line([(x, 486), (x, 500)], fill=(126, 132, 140, 255), width=11)
 
-    body = (118, 330, 396, 500)
+    # Туловище.
+    body = (164, 286, 348, 458)
     c.ellipse(*body, fill=CROW_BLUE)
     body_mask = c.inset(c.shape_mask_ellipse(*body), 3)
-    c.shade(body_mask, (124, 428, 396, 508), (20, 28, 38, 46))
-    c.highlight(body_mask, (154, 348, 300, 400), (190, 210, 230, 55))
+    c.shade(body_mask, (170, 396, 348, 466), (20, 28, 38, 46))
+    c.highlight(body_mask, (188, 306, 296, 348), (190, 210, 230, 55))
 
-    # Крыло с блестящими пёрышками.
-    c.ellipse(138, 366, 298, 476, fill=CROW_DARK, outline=INK, width=5)
-    wing_mask = c.inset(c.shape_mask_ellipse(138, 366, 298, 476), 2)
-    c.highlight(wing_mask, (154, 382, 232, 422), (150, 180, 210, 45))
-    for y in (402, 428, 452):
-        c.arc(156, y, 278, y + 24, 200, 340, fill=CROW_GLOSS, width=4)
+    # Тёмная грудка: на светлой птица выглядела в жилетке.
+    c.ellipse(210, 320, 302, 456, fill=(96, 110, 128, 255), outline=None, width=0)
+    for y in (356, 382, 408):
+        c.arc(218, y, 294, y + 22, 20, 160, fill=(120, 142, 168, 255), width=3)
 
-    head = (138, 102, 374, 398)
-    c.ellipse(*head, fill=CROW_BLUE, outline=None, width=0)
-    head_mask = c.inset(c.shape_mask_ellipse(*head), 3)
-    c.shade(head_mask, (188, 300, 380, 408), (20, 28, 38, 42))
-    c.highlight(head_mask, (166, 126, 288, 202), (190, 212, 232, 55))
+    # Крылья-«рукава»: крепятся у плеча и сужаются книзу, поэтому
+    # не выглядят отдельными шарами по бокам.
+    for wing in (
+        [(190, 300), (140, 316), (118, 366), (126, 422), (172, 452), (206, 420)],
+        [(322, 300), (372, 316), (394, 366), (386, 422), (340, 452), (306, 420)],
+    ):
+        c.blob(wing, CROW_DARK, width=5)
+    for y in (344, 372, 400, 428):
+        c.arc(132, y, 208, y + 24, 200, 340, fill=CROW_GLOSS, width=4)
+        c.arc(304, y, 380, y + 24, 200, 340, fill=CROW_GLOSS, width=4)
 
-    # Хохолок.
-    for x, dx in ((230, -6), (256, 0), (282, 6)):
-        c.line([(x, 118), (x + dx, 88)], width=4)
+    # Голова-«яйцо»: круглый верх и узкий подбородок, поэтому контур
+    # не режет грудку пополам, как ровный круг.
+    head_points = [
+        (256, 62), (318, 76), (356, 128), (366, 190), (350, 248),
+        (312, 288), (272, 304), (240, 304), (200, 288), (162, 248),
+        (146, 190), (156, 128), (194, 76),
+    ]
+    c.blob(head_points, CROW_BLUE, width=6)
+    head_mask = c.inset(c.shape_mask_blob(head_points), 4)
+    c.shade(head_mask, (192, 240, 356, 312), (20, 28, 38, 42))
+    c.highlight(head_mask, (176, 88, 296, 152), (190, 212, 232, 60))
 
-    # Светлые глаза, иначе чёрные зрачки теряются на тёмном оперении.
+    # Гладкая круглая голова без хохолка: с тремя торчащими перьями ворона
+    # похожа на удода, а у ворона голова ровная. Светлые глазные кольца
+    # нужны, чтобы зрачки не пропадали на тёмном оперении.
     for cx in (204, 308):
-        c.ellipse(cx - 26, 220, cx + 26, 274, fill=(242, 246, 250, 255), outline=INK, width=4)
-        c.eye(cx, 247, rx=15, ry=19)
-    c.blush(154, 286, 198, 316, opacity=65)
-    c.blush(314, 286, 358, 316, opacity=65)
+        c.ellipse(cx - 30, 156, cx + 30, 216, fill=(242, 246, 250, 255), outline=INK, width=4)
+        c.eye(cx, 186, rx=16, ry=20)
+    c.blush(158, 224, 200, 256, opacity=60)
+    c.blush(312, 224, 354, 256, opacity=60)
 
-    # Клюв: крупный, с крючком на конце и светлой спинкой, чтобы читался
-    # на тёмном оперении.
-    c.polygon([(228, 284), (284, 276), (268, 312), (284, 318), (258, 354)],
-              fill=(104, 120, 138, 255), outline=INK, width=4)
-    c.line([(234, 294), (278, 286)], width=3)
-    c.line([(262, 312), (278, 316)], width=3)
-    c.ellipse(250, 292, 256, 298, fill=INK, outline=None, width=0)
-    c.ellipse(*head, fill=None, outline=INK, width=6)
+    # Клюв: длинный и тяжёлый, с крючком на конце — главная воронья
+    # примета. Широкий треугольник читался как голубиный.
+    c.blob(
+        [(228, 208), (286, 208), (278, 250), (266, 286), (258, 310),
+         (250, 286), (238, 250)],
+        (104, 112, 128, 255),
+        width=5,
+    )
+    c.line([(234, 242), (282, 242)], fill=(150, 160, 176, 255), width=3)
+    # Щетинки у основания клюва: без них клюв выглядит «наклейкой».
+    for dx in (-1, 1):
+        for step in (0, 1):
+            x0 = 256 + dx * (26 + step * 10)
+            c.line([(x0, 216), (x0 + dx * 8, 234)], fill=CROW_DARK, width=3)
     return c
 
 
 def cuckoo():
     c = Canvas()
-    c.ground_shadow(116, 448, 398, 500, opacity=26)
+    c.ground_shadow(134, 432, 392, 492, opacity=26)
 
-    # Длинный хвост с пестринами.
-    c.blob([(332, 428), (446, 456), (462, 482), (380, 470)], CUCKOO_DARK, width=5)
-    for x, y in ((388, 450), (414, 460), (440, 470)):
-        c.ellipse(x - 8, y - 6, x + 8, y + 6, fill=CUCKOO_LIGHT, outline=None, width=0)
+    # Длинный хвост с поперечными пестринами — главная примета кукушки.
+    tail = [(330, 392), (410, 412), (474, 452), (458, 486), (368, 478), (330, 448)]
+    c.blob(tail, CUCKOO_DARK, width=5)
+    for x, y in ((384, 424), (414, 440), (444, 456)):
+        c.ellipse(x - 12, y - 7, x + 12, y + 7, fill=CUCKOO_LIGHT, outline=None, width=0)
 
     # Лапки.
-    for x in (208, 286):
-        c.line([(x, 440), (x, 484)], fill=ORANGE, width=8)
-        c.line([(x, 484), (x - 22, 498)], fill=ORANGE, width=6)
-        c.line([(x, 484), (x + 22, 498)], fill=ORANGE, width=6)
+    for x in (222, 290):
+        c.line([(x, 440), (x, 486)], fill=ORANGE, width=17)
+        c.line([(x, 486), (x - 32, 498)], fill=ORANGE, width=11)
+        c.line([(x, 486), (x + 32, 498)], fill=ORANGE, width=11)
+        c.line([(x, 486), (x, 500)], fill=ORANGE, width=11)
 
-    body = (120, 330, 394, 500)
+    body = (168, 286, 348, 458)
     c.ellipse(*body, fill=CUCKOO_GRAY)
     body_mask = c.inset(c.shape_mask_ellipse(*body), 3)
-    c.shade(body_mask, (126, 428, 394, 508), (30, 40, 50, 34))
-    c.highlight(body_mask, (152, 348, 294, 400), (255, 255, 255, 70))
+    c.shade(body_mask, (174, 396, 348, 466), (30, 40, 50, 34))
 
     # Светлая грудка в поперечную полоску.
-    belly = (186, 366, 326, 506)
+    belly = (206, 316, 306, 456)
     c.ellipse(*belly, fill=CUCKOO_LIGHT, outline=None, width=0)
     belly_mask = c.inset(c.shape_mask_ellipse(*belly), 2)
 
     def cuckoo_bars(d, _layer):
-        for y in (386, 410, 434, 458, 482):
-            d.arc(c.box(190, y, 322, y + 26), 200, 340, fill=CUCKOO_DARK, width=scaled(4))
+        for y in (346, 372, 398, 424):
+            d.arc(c.box(206, y, 306, y + 24), 200, 340, fill=CUCKOO_DARK, width=scaled(5))
 
     c.clip(belly_mask, cuckoo_bars)
 
-    # Крыло.
-    c.ellipse(138, 366, 296, 474, fill=CUCKOO_DARK, outline=INK, width=5)
-    for y in (400, 426, 450):
-        c.arc(156, y, 276, y + 22, 200, 340, fill=CUCKOO_GRAY, width=4)
+    # Крылья.
+    for wing in (
+        [(192, 300), (142, 316), (120, 366), (128, 422), (174, 452), (208, 420)],
+        [(324, 300), (374, 316), (396, 366), (388, 422), (342, 452), (308, 420)],
+    ):
+        c.blob(wing, CUCKOO_DARK, width=5)
+    for y in (344, 372, 400, 428):
+        c.arc(134, y, 210, y + 24, 200, 340, fill=CUCKOO_GRAY, width=4)
+        c.arc(306, y, 382, y + 24, 200, 340, fill=CUCKOO_GRAY, width=4)
 
-    head = (142, 106, 370, 396)
-    c.ellipse(*head, fill=CUCKOO_GRAY, outline=None, width=0)
-    head_mask = c.inset(c.shape_mask_ellipse(*head), 3)
-    c.shade(head_mask, (190, 300, 376, 406), (30, 40, 50, 30))
-    c.highlight(head_mask, (164, 128, 286, 202), (255, 255, 255, 85))
+    # Голова.
+    head_points = [
+        (256, 66), (318, 80), (354, 130), (364, 190), (348, 246),
+        (312, 286), (272, 302), (240, 302), (200, 286), (164, 246),
+        (148, 190), (158, 130), (194, 80),
+    ]
+    c.blob(head_points, CUCKOO_GRAY, width=6)
+    head_mask = c.inset(c.shape_mask_blob(head_points), 4)
+    c.highlight(head_mask, (178, 90, 296, 154), (255, 255, 255, 85))
+    c.shade(head_mask, (192, 240, 354, 310), (30, 40, 50, 30))
 
-    # Тёмная шапочка.
-    c.clip(head_mask, lambda d, _layer: d.ellipse(c.box(154, 108, 358, 206), fill=CUCKOO_DARK))
+    # Тёмная шапочка — вторая примета кукушки.
+    c.clip(
+        head_mask,
+        lambda d, _layer: d.ellipse(c.box(150, 66, 362, 168), fill=CUCKOO_DARK),
+    )
 
-    # Жёлтая радужка и чёрный зрачок.
+    # Жёлтое глазное кольцо и чёрный зрачок.
     for cx in (204, 308):
-        c.ellipse(cx - 28, 218, cx + 28, 274, fill=YELLOW, outline=INK, width=4)
-        c.eye(cx, 246, rx=15, ry=19)
-    c.blush(160, 282, 204, 310, opacity=65)
-    c.blush(308, 282, 352, 310, opacity=65)
+        c.ellipse(cx - 30, 172, cx + 30, 232, fill=YELLOW, outline=INK, width=4)
+        c.eye(cx, 202, rx=16, ry=20)
+    c.blush(160, 246, 204, 278, opacity=65)
+    c.blush(308, 246, 352, 278, opacity=65)
 
-    # Небольшой, но заметный клюв.
-    c.polygon([(234, 272), (282, 268), (262, 334), (252, 314)],
-              fill=CUCKOO_DARK, outline=INK, width=4)
-    c.line([(240, 288), (276, 286)], width=3)
-    c.ellipse(*head, fill=None, outline=INK, width=6)
+    # Маленький светлый клюв — кукушка не хищник.
+    c.polygon(
+        [(238, 236), (274, 236), (256, 282)],
+        fill=(244, 200, 128, 255),
+        outline=INK,
+        width=4,
+    )
+    c.line([(243, 250), (269, 250)], fill=INK_SOFT, width=2)
     return c
 
 

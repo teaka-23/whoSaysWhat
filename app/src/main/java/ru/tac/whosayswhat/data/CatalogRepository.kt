@@ -26,3 +26,15 @@ class CatalogRepository(private val context: Context) {
         const val CATALOG_ASSET = "catalog.json"
     }
 }
+
+/** Минимум разных животных, иначе раунду не из чего выбирать. */
+const val MIN_ANIMALS_TO_PLAY = 2
+
+/**
+ * Пригоден ли каталог для игры. [ru.tac.whosayswhat.game.SessionEngine] требует
+ * минимум двух разных животных, поэтому недостаточный каталог показывается как
+ * ошибка загрузки, а не роняет приложение исключением.
+ */
+fun Catalog.isPlayable(): Boolean =
+    animals.distinctBy { it.id }.size >= MIN_ANIMALS_TO_PLAY
+

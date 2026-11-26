@@ -22,8 +22,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -76,6 +78,8 @@ fun GuessScreen(
     var solved by remember { mutableIntStateOf(0) }
     var locked by remember { mutableStateOf(false) }
     var wrongAnimalId by remember { mutableStateOf<String?>(null) }
+    // Верное животное подсвечивается на время похвалы, до следующего раунда.
+    var correctAnimalId by remember { mutableStateOf<String?>(null) }
     var shakeKey by remember { mutableIntStateOf(0) }
     val scope = rememberCoroutineScope()
 
@@ -103,36 +107,34 @@ fun GuessScreen(
                 // перекрывать круг со звуком даже на 320dp.
                 .padding(start = 16.dp, end = 16.dp, top = 64.dp, bottom = 16.dp),
         ) {
-            val gap = 16.dp
-            // На узких экранах круг чуть меньше, чтобы не задевать
-            // индикатор прогресса в левом верхнем углу.
-            val promptSize = minOf(148.dp, maxWidth * 0.38f)
-            val promptGap = 24.dp
-            val rows = (round.options.size + 1) / 2
-            val cellWidth = (maxWidth - gap) / 2
-            val availableForCards = maxHeight - promptSize - promptGap
-            // Высота карточек ограничена и шириной (чтобы не были вытянутыми),
-            // и доступной высотой (чтобы 3–4 карточки всегда помещались целиком).
-            val cellHeight = if (rows > 0) {
-                minOf(
-                    (availableForCards - gap * (rows - 1)) / rows,
-                    cellWidth / 0.82f,
-                ).coerceAtLeast(96.dp)
-            } else {
-                120.dp
-            }
+            val layout = guessLayout(
+                maxWidth = maxWidth,
+                maxHeight = maxHeight,
+                options = round.options.size,
+            )
+            val scrollState = rememberScrollState()
 
             Column(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(
-                    promptGap,
-                    Alignment.CenterVertically,
-                ),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .then(
+                        if (layout.scrollable) {
+                            Modifier.verticalScroll(scrollState)
+                        } else {
+                            Modifier
+                        },
+                    ),
+                verticalArrangement = if (layout.scrollable) {
+                    // Прокрутка начинается сверху: центрировать нечего.
+                    Arrangement.spacedBy(GUESS_PROMPT_GAP)
+                } else {
+                    Arrangement.spacedBy(GUESS_PROMPT_GAP, Alignment.CenterVertically)
+                },
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Box(
                     modifier = Modifier
-                        .size(promptSize)
+                        .size(layout.promptSize)
                         .graphicsLayer {
                             scaleX = pulseScale
                             scaleY = pulseScale
@@ -151,13 +153,13 @@ fun GuessScreen(
                     Text(text = "🔊", fontSize = 64.sp)
                 }
 
-                // 2×N без прокрутки: уровни на 2, 3 и 4 карточки помещаются
-                // целиком, а зоны нажатия остаются крупными для малыша.
-                Column(verticalArrangement = Arrangement.spacedBy(gap)) {
-                    round.options.chunked(2).forEach { rowAnimals ->
+                // Карточки раскладываются по columns из [guessLayout]:
+                // в портрете это 2×N, в ландшафте — один ряд из 3–4.
+                Column(verticalArrangement = Arrangement.spacedBy(GUESS_CARD_GAP)) {
+                    round.options.chunked(layout.columns).forEach { rowAnimals ->
                         Row(
-                            modifier = Modifier.fillMaxWidth().height(cellHeight),
-                            horizontalArrangement = Arrangement.spacedBy(gap),
+                            modifier = Modifier.fillMaxWidth().height(layout.cardHeight),
+                            horizontalArrangement = Arrangement.spacedBy(GUESS_CARD_GAP),
                         ) {
                             rowAnimals.forEach { animal ->
                                 AnimalCard(
@@ -175,16 +177,24 @@ fun GuessScreen(
                                             is Answer.Correct -> {
                                                 onAnswer(round.target.id, true)
                                                 locked = true
+                                                correctAnimalId = animal.id
                                                 solved++
-                                                val isLast = solved >= ROUNDS_PER_SESSION
-                                                scope.launch {
-                                                    soundPlayer.play("sounds/praise.wav")
-                                                    delay(900)
-                                                    if (isLast) {
-                                                        onSessionFinished()
-                                                    } else {
+                                                val step = correctAnswerStep(solved)
+                                                if (step.finishSession) {
+                                                    // Награда открывается сразу и сама
+                                                    // играет похвалу: пауза здесь сыграла
+                                                    // бы тот же файл второй раз.
+                                                    onSessionFinished()
+                                                } else {
+                                                    scope.launch {
+                                                        soundPlayer.play("sounds/praise.wav")
+                                                        delay(step.pauseMs)
                                                         round = engine.start()
                                                         locked = false
+                                                        // Новая цель — чистая доска: иначе
+                                                        // подсветка останется на прежней карточке.
+                                                        correctAnimalId = null
+                                                        wrongAnimalId = null
                                                     }
                                                 }
                                             }
@@ -192,10 +202,15 @@ fun GuessScreen(
                                     },
                                     modifier = Modifier.weight(1f).fillMaxHeight(),
                                     shakeKey = if (wrongAnimalId == animal.id) shakeKey else 0,
+                                    feedback = guessFeedback(
+                                        animalId = animal.id,
+                                        correctId = correctAnimalId,
+                                        wrongId = wrongAnimalId,
+                                    ),
                                     onClickLabel = "Выбрать ${animal.name}",
                                 )
                             }
-                            if (rowAnimals.size == 1) {
+                            repeat(layout.columns - rowAnimals.size) {
                                 Spacer(modifier = Modifier.weight(1f))
                             }
                         }

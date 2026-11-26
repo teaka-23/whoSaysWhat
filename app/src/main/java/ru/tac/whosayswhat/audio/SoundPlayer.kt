@@ -5,12 +5,22 @@ import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.media.SoundPool
+import android.os.Handler
+import android.os.Looper
+import android.os.SystemClock
 import android.util.Log
 
 /**
  * Короткие звуки через SoundPool: один звук за раз, предыдущий обрывается.
  * Громкость и фокус аудио — чтобы не «перекрикивать» другие приложения,
  * а в детском приложении не пугать резким стартом.
+ *
+ * Фокус берётся только на время звука: короткое удержание, затем
+ * `abandonAudioFocusRequest`, иначе приложение приглушало бы чужую музыку всё
+ * время работы. Сроки считает [AudioFocusHold].
+ *
+ * Использовать с главного потока: так приходят колбэки SoundPool и таймер
+ * возврата фокуса.
  */
 class SoundPlayer(context: Context) {
 
@@ -37,6 +47,35 @@ class SoundPlayer(context: Context) {
     private var focusRequest: AudioFocusRequest? = null
     private var activeStreamId = 0
 
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private val focusHold = AudioFocusHold()
+
+    /**
+     * Фокус отобрали — сразу замолкаем: поверх звонка или чужой игры наш звук
+     * звучал бы невпопад. Следующий звук запросит фокус заново.
+     */
+    private val focusListener = AudioManager.OnAudioFocusChangeListener { change ->
+        when (change) {
+            AudioManager.AUDIOFOCUS_LOSS,
+            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT,
+            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK,
+            -> {
+                stopStream()
+                focusHold.onFocusLost()
+            }
+        }
+    }
+
+    /** Возвращает фокус, когда звук доиграл и пауза не заполнилась новым. */
+    private val releaseFocusRunnable = Runnable {
+        if (focusHold.shouldRelease(SystemClock.uptimeMillis())) {
+            releaseFocus()
+        } else {
+            // Обработчик сработал на пару миллисекунд раньше срока.
+            scheduleFocusRelease()
+        }
+    }
+
     init {
         soundPool.setOnLoadCompleteListener { _, sampleId, status ->
             val path = sampleToPath[sampleId]
@@ -57,7 +96,13 @@ class SoundPlayer(context: Context) {
 
     /** Предзагрузка на старте приложения, чтобы первый тап не был тихим. */
     fun preload(paths: Collection<String>) {
-        paths.asSequence().filter { it.isNotBlank() }.distinct().forEach(::load)
+        paths.asSequence().filter { it.isNotBlank() }.distinct().forEach { path ->
+            load(path)
+            // Длительность нужна сразу при старте звука: по ней считается,
+            // сколько держать аудиофокус. Читаем заголовок заранее, чтобы не
+            // открывать assets на каждый тап.
+            durationMs(path)
+        }
     }
 
     fun play(path: String) {
@@ -114,13 +159,30 @@ class SoundPlayer(context: Context) {
     }
 
     private fun playNow(sampleId: Int) {
-        requestFocus()
-        stop()
+        // Предыдущий звук обрываем, но фокус не отдаём: он нужен новому.
+        stopStream()
+        requestFocusIfNeeded()
         activeStreamId = soundPool.play(sampleId, VOLUME, VOLUME, PRIORITY, 0, 1f)
+        if (activeStreamId == 0) {
+            // SoundPool не принял звук — держать фокус незачем.
+            releaseFocus()
+            return
+        }
+        val soundDurationMs = sampleToPath[sampleId]?.let(::durationMs) ?: 0L
+        focusHold.onPlaybackStarted(SystemClock.uptimeMillis(), soundDurationMs)
+        scheduleFocusRelease()
     }
 
-    /** Останавливает текущий звук. Нужен перед записью голоса в режиме «Эхо». */
+    /**
+     * Останавливает текущий звук и возвращает аудиофокус. Нужен перед записью
+     * голоса в режиме «Эхо»: держать фокус во время записи незачем.
+     */
     fun stop() {
+        stopStream()
+        releaseFocus()
+    }
+
+    private fun stopStream() {
         pendingPath = null
         if (activeStreamId != 0) {
             soundPool.stop(activeStreamId)
@@ -128,20 +190,36 @@ class SoundPlayer(context: Context) {
         }
     }
 
-    private fun requestFocus() {
-        if (focusRequest != null) return
-        val request = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
+    private fun requestFocusIfNeeded() {
+        if (!focusHold.needsRequest()) return
+        val request = focusRequest ?: AudioFocusRequest
+            .Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
             .setAudioAttributes(attributes)
+            .setOnAudioFocusChangeListener(focusListener, mainHandler)
             .build()
-        if (audioManager.requestAudioFocus(request) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
-            focusRequest = request
+            .also { focusRequest = it }
+        val result = audioManager.requestAudioFocus(request)
+        if (result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
+            focusHold.onFocusGranted()
         }
+    }
+
+    private fun scheduleFocusRelease() {
+        mainHandler.removeCallbacks(releaseFocusRunnable)
+        val delayMs = focusHold.msUntilRelease(SystemClock.uptimeMillis())
+        if (delayMs > 0L) mainHandler.postDelayed(releaseFocusRunnable, delayMs)
+    }
+
+    private fun releaseFocus() {
+        mainHandler.removeCallbacks(releaseFocusRunnable)
+        val request = focusRequest ?: return
+        audioManager.abandonAudioFocusRequest(request)
+        focusHold.onReleased()
     }
 
     fun release() {
         stop()
-        focusRequest?.let(audioManager::abandonAudioFocusRequest)
-        focusRequest = null
+        mainHandler.removeCallbacksAndMessages(null)
         soundPool.release()
         sampleIds.clear()
         sampleToPath.clear()

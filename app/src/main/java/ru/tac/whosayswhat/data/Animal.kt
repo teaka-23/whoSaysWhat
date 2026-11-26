@@ -11,6 +11,8 @@ import kotlinx.serialization.Serializable
 data class Animal(
     val id: String,
     val name: String,
+    /** Ласковое имя для озвучки: «слоник», «кошечка». Если пусто — берётся [name]. */
+    @SerialName("affectionate_name") val affectionateName: String? = null,
     val image: String? = null,
     @SerialName("image_transparent") val imageTransparent: String? = null,
     @SerialName("sound_file") val soundFile: String,
@@ -23,6 +25,13 @@ data class Animal(
 ) {
     /** Основной звук для игры «Угадай»: человеческое подражание, если есть. */
     val gameSoundFile: String get() = onomatopoeiaFile ?: soundFile
+
+    /**
+     * Имя для TTS: ласковое, если оно задано, иначе каноническое.
+     * Карточки и игра по-прежнему используют [name].
+     */
+    val narrationName: String
+        get() = affectionateName?.trim()?.takeIf { it.isNotEmpty() } ?: name
 }
 
 @Serializable

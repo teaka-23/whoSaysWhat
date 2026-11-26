@@ -3,19 +3,19 @@ package ru.tac.whosayswhat.audio
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-/** Фраза озвучки должна звучать по-человечески: «Это слон», а не «Слон». */
+/** Фраза озвучки должна звучать тепло: «Это слоник!». */
 class NarrationPhraseTest {
 
     @Test
-    fun `adds friendly prefix and lowercases common noun`() {
-        assertEquals("Это слон", narrationPhrase("Слон"))
-        assertEquals("Это петух", narrationPhrase("Петух"))
-        assertEquals("Это мышка", narrationPhrase("Мышка"))
+    fun `adds exclamation and lowercases common noun`() {
+        assertEquals("Это слоник!", narrationPhrase("Слоник"))
+        assertEquals("Это петушок!", narrationPhrase("Петушок"))
+        assertEquals("Это мышка!", narrationPhrase("Мышка"))
     }
 
     @Test
     fun `trims surrounding spaces and keeps inner words`() {
-        assertEquals("Это морская свинка", narrationPhrase("  Морская свинка  "))
+        assertEquals("Это морская свинка!", narrationPhrase("  Морская свинка  "))
     }
 
     @Test

@@ -32,3 +32,20 @@
 - После замены записи синхронизировать `THIRD_PARTY_NOTICES.md`,
   `app/src/main/assets/licenses/animal-sounds.md` (эти два файла должны
   совпадать байт-в-байт) и блок `SOUND_CREDITS` в `ui/ParentPanel.kt`.
+
+## Навыки и проектирование
+- Навыки лежат в `.cline/skills/` (источник истины) и синхронизированы в
+  `~/.cline/skills/` (глобальная копия). Источник и порядок обновления — в
+  `.cline/skills/README.md`, решение — в `docs/adr/0001-use-agent-skills.md`.
+- Проектные детали (`JAVA_HOME`, пути тестов, аудио-теги, источники ревью)
+  живут в `.clinerules` и `docs/agents/project-context.md`, а не в `SKILL.md`:
+  навыки нейтральные.
+- После правки навыка: `./tools/sync_global_skills.sh`.
+- Перед новой фичей: `/grill-me` (или `grilling`) → `codebase-design` →
+  `domain-modeling`, если меняются термины или принимается решение.
+- Реализация: `tdd`, вертикальными срезами; сложный баг — `diagnosing-bugs`.
+- Перед коммитом: `code-review` от закреплённой точки; в конце длинной
+  сессии — `handoff` в `$TMPDIR`, не в репозиторий.
+- Термины — по `GLOSSARY.md`; новые термины сначала добавлять туда.
+- Навыки не отменяют эти правила. При конфликте главнее `.clinerules`,
+  затем `docs/agents/project-context.md`, затем `SKILL.md`.
