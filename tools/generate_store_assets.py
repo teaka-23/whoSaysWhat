@@ -7,7 +7,7 @@
 """
 import os
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageCms, ImageDraw, ImageFont
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 ASSETS = os.path.join(ROOT, "store", "assets")
@@ -25,6 +25,11 @@ def font(size: int) -> ImageFont.FreeTypeFont:
     # Arial Rounded MT не содержит кириллицы, поэтому для текста берём Arial.
     path = "/System/Library/Fonts/Supplemental/Arial Bold.ttf"
     return ImageFont.truetype(path, size)
+
+
+def srgb_profile() -> bytes:
+    """Профиль sRGB: без ICC валидаторы каталога иногда отвергают картинку молча."""
+    return ImageCms.ImageCmsProfile(ImageCms.createProfile("sRGB")).tobytes()
 
 
 def rounded_mask(size: int, radius: int) -> Image.Image:
@@ -90,7 +95,7 @@ def main() -> None:
 
     icon = draw_icon()
     icon_path = os.path.join(ASSETS, "icon-512.png")
-    icon.save(icon_path, "PNG", optimize=True)
+    icon.save(icon_path, "PNG", optimize=True, icc_profile=srgb_profile())
     print(f"icon: {icon_path}")
 
     # JPEG-двойник: консоль RuStore показывает по иконке только «не прошло
@@ -104,6 +109,7 @@ def main() -> None:
         optimize=True,
         progressive=False,
         dpi=(72, 72),
+        icc_profile=srgb_profile(),
     )
     print(f"icon (jpg): {icon_jpg_path}")
 
