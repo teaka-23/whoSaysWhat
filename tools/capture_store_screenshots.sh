@@ -15,14 +15,22 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OUT="$ROOT/store/screenshots"
 APK="$ROOT/app/build/outputs/apk/debug/app-debug.apk"
 PKG="ru.tac.whosayswhat"
-SIZE="1920x1080"
+# 16:9 по умолчанию; при отказах валидатора можно снять то же в 1280×720:
+#   SIZE=1280x720 tools/capture_store_screenshots.sh
+SIZE="${SIZE:-1920x1080}"
 DENSITY=320
+# Координаты жестов заданы для 1920×1080; для другого 16:9 размера пересчитываем.
+BASE_W=1920
+BASE_H=1080
+W="${SIZE%x*}"
+H="${SIZE#*x}"
 
 [ -x "$ADB" ] || { echo "adb не найден: $ADB" >&2; exit 1; }
 [ -f "$APK" ] || { echo "нет debug APK: $APK (соберите :app:assembleDebug)" >&2; exit 1; }
 "$ADB" devices | grep -q "device$" || { echo "эмулятор не подключён" >&2; exit 1; }
 
 mkdir -p "$OUT"
+MADE=()
 "$ADB" shell wm size "$SIZE" >/dev/null
 "$ADB" shell wm density "$DENSITY" >/dev/null
 "$ADB" uninstall "$PKG" >/dev/null 2>&1 || true
@@ -33,40 +41,63 @@ sleep 5
 "$ADB" exec-out screencap -p > /dev/null
 sleep 4
 
+tap() { # tap <x> <y> в координатах 1920×1080
+  "$ADB" shell input tap $(( $1 * W / BASE_W )) $(( $2 * H / BASE_H ))
+}
+
+swipe() { # swipe <x1> <y1> <x2> <y2> <мс> в координатах 1920×1080
+  "$ADB" shell input swipe \
+    $(( $1 * W / BASE_W )) $(( $2 * H / BASE_H )) \
+    $(( $3 * W / BASE_W )) $(( $4 * H / BASE_H )) "$5"
+}
+
 snap() { # snap <имя-без-расширения>
   local tmp="/tmp/rustore-screen-$1.png"
   "$ADB" exec-out screencap -p > "$tmp"
-  sips -s format jpeg -s formatOptions 92 "$tmp" --out "$OUT/$1.jpg" >/dev/null
+  # JPEG собираем через Pillow: sRGB-профиль внутрь, без EXIF и Photoshop-блока,
+  # 4:4:4 без прореживания цвета — так файл принимают любые валидаторы каталогов.
+  python3 - "$tmp" "$OUT/$1.jpg" <<'PY'
+import sys
+from PIL import Image, ImageCms
+
+src, dst = sys.argv[1], sys.argv[2]
+srgb = ImageCms.ImageCmsProfile(ImageCms.createProfile("sRGB")).tobytes()
+image = Image.open(src).convert("RGB")
+image.save(dst, "JPEG", quality=90, subsampling=0, optimize=True, icc_profile=srgb)
+PY
   echo "  $OUT/$1.jpg"
+  MADE+=("$OUT/$1.jpg")
 }
 
 echo "1. Песочница"
-snap "01-sandbox-1920x1080"
+snap "01-sandbox-$SIZE"
 
 # Замок в правом верхнем углу; кнопка «Играть» — внизу по центру.
 echo "2. Игра «Угадай»"
-"$ADB" shell input tap 960 966
+tap 960 966
 sleep 3
-snap "02-guess-1920x1080"
+snap "02-guess-$SIZE"
 
 echo "3. Для родителей"
 "$ADB" shell input keyevent 4
 sleep 1
-"$ADB" shell "input tap 1855 118; input tap 1855 118; input tap 1855 118"
+tap 1855 118
+tap 1855 118
+tap 1855 118
 sleep 2
-snap "03-parents-1920x1080"
+snap "03-parents-$SIZE"
 
 echo "4. Приватность (прокрутка панели)"
-"$ADB" shell input swipe 960 900 960 250 400
+swipe 960 900 960 250 400
 sleep 1
-snap "04-privacy-1920x1080"
+snap "04-privacy-$SIZE"
 
 "$ADB" shell input keyevent 4 >/dev/null
 "$ADB" shell wm size reset >/dev/null
 "$ADB" shell wm density reset >/dev/null
 
 echo "Готово. Проверка размеров:"
-for f in "$OUT"/*.jpg; do
+for f in "${MADE[@]}"; do
   printf '  %s: ' "$(basename "$f")"
   sips -g pixelWidth -g pixelHeight "$f" | tail -2 | tr -d '\n' | sed 's/  */ /g'
   printf ', %s КБ\n' "$(( $(stat -f%z "$f") / 1024 ))"
