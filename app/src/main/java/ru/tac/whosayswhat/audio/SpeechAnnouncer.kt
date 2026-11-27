@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
 import android.speech.tts.Voice
 import android.util.Log
 import java.util.Locale
@@ -20,6 +21,10 @@ import java.util.Locale
  * просит `INTERNET` и ничего не отправляет наружу. Если движка или русского
  * голоса в системе нет, озвучка тихо пропускается, а звук животного играет
  * как обычно. Новый тап отменяет и предыдущую фразу, и текущую.
+ *
+ * О конце фразы класс сообщает колбэком: по нему закрывается крупный план
+ * животного. Колбэк приходит и тогда, когда фразы не будет вовсе, — иначе
+ * увеличенная картинка ждала бы таймаута без причины.
  */
 class SpeechAnnouncer(context: Context) : TextToSpeech.OnInitListener {
 
@@ -35,8 +40,22 @@ class SpeechAnnouncer(context: Context) : TextToSpeech.OnInitListener {
     private var ready = false
     private var released = false
 
+    /**
+     * Кого позвать, когда фраза закончилась (или стало ясно, что её не будет).
+     * По этому сигналу крупный план животного закрывается: сам он не знает,
+     * сколько продлится озвучка названия на конкретном голосе.
+     */
+    private var onPhraseFinished: (() -> Unit)? = null
+
     /** Сколько раз уже ждали поднимающийся движок для текущей фразы. */
     private var readyAttempts = 0
+
+    /**
+     * Номер текущей фразы: у каждого «Это кошечка!» свой идентификатор, иначе
+     * запоздалый колбэк от прошлой фразы закрыл бы крупный план слишком рано.
+     */
+    private var utteranceSeq = 0
+    private var currentUtteranceId: String? = null
 
     private val speakTask = object : Runnable {
         override fun run() {
@@ -49,6 +68,7 @@ class SpeechAnnouncer(context: Context) : TextToSpeech.OnInitListener {
                 if (!shouldKeepWaitingForTts(readyAttempts)) {
                     pendingPhrase = null
                     Log.w(TAG, "Синтезатор речи не поднялся, фраза пропущена")
+                    finishPhrase()
                     return
                 }
                 readyAttempts++
@@ -57,16 +77,42 @@ class SpeechAnnouncer(context: Context) : TextToSpeech.OnInitListener {
             }
             readyAttempts = 0
             if (!ready) {
+                // Русского голоса в системе нет — фразы не будет.
                 pendingPhrase = null
+                finishPhrase()
                 return
             }
             pendingPhrase = null
-            engine.speak(phrase, TextToSpeech.QUEUE_FLUSH, speakParams, UTTERANCE_ID)
+            val utteranceId = "$UTTERANCE_ID-${++utteranceSeq}"
+            currentUtteranceId = utteranceId
+            engine.speak(phrase, TextToSpeech.QUEUE_FLUSH, speakParams, utteranceId)
         }
     }
 
     init {
         tts = TextToSpeech(context.applicationContext, this)
+        // Колбэк синтезатора приходит на binder-потоке: возвращаем его на
+        // главный поток, чтобы крупный план закрывался в обычном порядке
+        // Compose, а не из чужого потока.
+        runCatching {
+            tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+                override fun onStart(utteranceId: String?) = Unit
+
+                override fun onDone(utteranceId: String?) {
+                    if (isCurrentUtterance(utteranceId)) handler.post { finishPhrase() }
+                }
+
+                override fun onError(utteranceId: String?) {
+                    if (isCurrentUtterance(utteranceId)) handler.post { finishPhrase() }
+                }
+
+                override fun onError(utteranceId: String?, errorCode: Int) {
+                    if (isCurrentUtterance(utteranceId)) handler.post { finishPhrase() }
+                }
+            })
+        }.onFailure { error ->
+            Log.w(TAG, "Не удалось подписаться на окончание фразы", error)
+        }
     }
 
     override fun onInit(status: Int) {
@@ -121,12 +167,32 @@ class SpeechAnnouncer(context: Context) : TextToSpeech.OnInitListener {
     /**
      * Планирует «Это <ласковое имя>!» сразу после звука и короткой паузы.
      * Если ребёнок нажал другую карточку, предыдущая фраза отменяется.
+     *
+     * [onFinished] вызывается, когда фраза договорена, и в тех случаях, когда
+     * её не будет вовсе (нет движка, нет русского голоса, синтез не удался).
+     * Крупный план животного закрывается именно по этому сигналу, поэтому
+     * «тихий пропуск» озвучки не должен оставлять картинку на экране.
      */
-    fun announceAfter(soundDurationMs: Long, narrationName: String) {
-        if (narrationName.isBlank() || released) return
-        val engine = tts ?: return
+    fun announceAfter(
+        soundDurationMs: Long,
+        narrationName: String,
+        onFinished: (() -> Unit)? = null,
+    ) {
+        // Прошлое ожидание больше не нужно: его ожидающий не должен ждать
+        // таймаута, если новый тап перекрыл фразу.
+        finishPhrase()
+        if (narrationName.isBlank() || released) {
+            onFinished?.invoke()
+            return
+        }
+        val engine = tts
+        if (engine == null) {
+            onFinished?.invoke()
+            return
+        }
         handler.removeCallbacks(speakTask)
         pendingPhrase = narrationPhrase(narrationName)
+        onPhraseFinished = onFinished
         readyAttempts = 0
         engine.stop()
         handler.postDelayed(speakTask, narrationDelayMs(soundDurationMs))
@@ -137,6 +203,8 @@ class SpeechAnnouncer(context: Context) : TextToSpeech.OnInitListener {
         pendingPhrase = null
         handler.removeCallbacks(speakTask)
         tts?.stop()
+        // Ожидающий крупный план закрывается: фразы не будет.
+        finishPhrase()
     }
 
     fun release() {
@@ -146,6 +214,20 @@ class SpeechAnnouncer(context: Context) : TextToSpeech.OnInitListener {
         tts?.shutdown()
         tts = null
         ready = false
+    }
+
+    /**
+     * Колбэк синтезатора относится к текущей фразе? Запоздалый «готово» от
+     * прошлой фразы не должен закрывать крупный план новой.
+     */
+    private fun isCurrentUtterance(utteranceId: String?): Boolean =
+        utteranceId != null && utteranceId == currentUtteranceId
+
+    /** Сообщает ожидающему, что фраза закончилась или не состоится. */
+    private fun finishPhrase() {
+        val callback = onPhraseFinished ?: return
+        onPhraseFinished = null
+        callback()
     }
 
     private companion object {

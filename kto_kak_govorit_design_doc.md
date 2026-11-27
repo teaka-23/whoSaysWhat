@@ -89,7 +89,7 @@
 
 ### 5.1 Общие правила для всех 6
 
-- **Формат:** квадрат 512×512 px (легко масштабируется под любые экраны).
+- **Формат:** квадрат 1024×1024 px (легко масштабируется под любые экраны).
 - **Фон:** однотонный, кремовый или бледно-голубой (#F5F6FA). Никаких узоров, травы, домиков — только животное.
 - **Контур:** толщина 4–6 px, цвет тёмно-серый (#333333), скруглённые углы.
 - **Стиль:** «мультяшный минимализм» — округлые формы, мягкие тени, без резких градиентов.
@@ -182,7 +182,7 @@
 - **Данные:** каталог животных — JSON в `assets`, разбор через `kotlinx.serialization` (без reflection, чтобы не ломалось после R8). Прогресс — `DataStore`, локально, без аккаунта.
 - **Анимации:** Compose (scale/rotate), 200–400 мс. Lottie/Rive — только если понадобятся сложные анимации животных.
 - **Разрешения:** в MVP — **ни одного**. Нет `INTERNET`, нет `RECORD_AUDIO`. Это плюс к доверию родителей и пустая декларация данных в RuStore.
-- **Размер:** 6 иллюстраций (WebP 1024 или PNG 512) + 12 аудио ≈ 3–6 МБ.
+- **Размер:** 6 иллюстраций (WebP 1024 или PNG 1024) + 12 аудио ≈ 4–7 МБ.
 
 ### 7.2 Сборка и публикация
 
@@ -237,7 +237,7 @@
     {
       "id": "cow",
       "name": "Корова",
-      "image": "assets/cow_512.png",
+      "image": "assets/cow_1024.png",
       "image_transparent": "assets/cow_alpha.png",
       "sound_file": "sounds/cow_real.mp3",
       "onomatopoeia_file": "sounds/cow_voice.mp3",
@@ -250,7 +250,7 @@
     {
       "id": "cat",
       "name": "Кошка",
-      "image": "assets/cat_512.png",
+      "image": "assets/cat_1024.png",
       "image_transparent": "assets/cat_alpha.png",
       "sound_file": "sounds/cat_real.mp3",
       "onomatopoeia_file": "sounds/cat_voice.mp3",
@@ -263,7 +263,7 @@
     {
       "id": "dog",
       "name": "Собака",
-      "image": "assets/dog_512.png",
+      "image": "assets/dog_1024.png",
       "image_transparent": "assets/dog_alpha.png",
       "sound_file": "sounds/dog_real.mp3",
       "onomatopoeia_file": "sounds/dog_voice.mp3",
@@ -276,7 +276,7 @@
     {
       "id": "duck",
       "name": "Утка",
-      "image": "assets/duck_512.png",
+      "image": "assets/duck_1024.png",
       "image_transparent": "assets/duck_alpha.png",
       "sound_file": "sounds/duck_real.mp3",
       "onomatopoeia_file": "sounds/duck_voice.mp3",
@@ -289,7 +289,7 @@
     {
       "id": "horse",
       "name": "Лошадь",
-      "image": "assets/horse_512.png",
+      "image": "assets/horse_1024.png",
       "image_transparent": "assets/horse_alpha.png",
       "sound_file": "sounds/horse_real.mp3",
       "onomatopoeia_file": "sounds/horse_voice.mp3",
@@ -302,7 +302,7 @@
     {
       "id": "rooster",
       "name": "Петух",
-      "image": "assets/rooster_512.png",
+      "image": "assets/rooster_1024.png",
       "image_transparent": "assets/rooster_alpha.png",
       "sound_file": "sounds/rooster_real.mp3",
       "onomatopoeia_file": "sounds/rooster_voice.mp3",
@@ -320,7 +320,7 @@
 
 ## 11. Чек-лист перед стартом
 
-- [ ] Нарисовать 6 иллюстраций (512×512, единый стиль) + 6 версий без фона.
+- [ ] Нарисовать 6 иллюстраций (1024×1024, единый стиль) + 6 версий без фона.
 - [ ] Собрать/записать 12 аудиофайлов (6 реальных звуков + 6 звукоподражаний).
 - [ ] Записать 4 варианта похвалы + голосовые подсказки уровня 2.
 - [ ] Сверстать главный экран (6 кнопок 2×3 + «Играть»).

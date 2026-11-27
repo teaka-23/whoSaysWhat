@@ -64,17 +64,23 @@ fun AnimalArtwork(
     animal: Animal,
     modifier: Modifier = Modifier,
     contentDescription: String? = animal.name,
+    // Крупный план показывает картинку большой — ему нужен полный размер.
+    // Карточке хватает половины: 512 px вместо 1024, 1 МБ памяти вместо 4.
+    fullSize: Boolean = false,
 ) {
     val context = LocalContext.current
     val assetPath = remember(animal.image) { animalAssetPath(animal.image) }
+    val cacheKey = remember(assetPath, fullSize) {
+        assetPath?.let { imageCacheKey(it, fullSize) }
+    }
     // Кэш читается прямо в композиции: иначе при каждом возврате на экран
     // карточка успевала мигнуть эмодзи-заглушкой.
-    var image by remember(assetPath) { mutableStateOf(assetPath?.let(AnimalImages::get)) }
-    LaunchedEffect(assetPath) {
-        if (assetPath == null || image != null) return@LaunchedEffect
+    var image by remember(cacheKey) { mutableStateOf(cacheKey?.let(AnimalImages::get)) }
+    LaunchedEffect(cacheKey) {
+        if (assetPath == null || cacheKey == null || image != null) return@LaunchedEffect
         image = withContext(Dispatchers.IO) {
-            loadAssetImage(context, assetPath)?.also { decoded ->
-                AnimalImages.put(assetPath, decoded)
+            loadAssetImage(context, assetPath, fullSize)?.also { decoded ->
+                AnimalImages.put(cacheKey, decoded)
             }
         }
     }
@@ -223,9 +229,21 @@ fun animalEmoji(id: String): String = when (id) {
     else -> "🐾"
 }
 
-private fun loadAssetImage(context: Context, assetPath: String): ImageBitmap? =
-    runCatching {
-        context.assets.open(assetPath).use { stream ->
-            BitmapFactory.decodeStream(stream)?.asImageBitmap()
-        }
-    }.getOrNull()
+/**
+ * Карточке не нужны все пиксели PNG: половины хватает с запасом даже на
+ * экране с высокой плотностью, а памяти картинка занимает вчетверо меньше.
+ */
+private const val CARD_SAMPLE_SIZE = 2
+
+private fun loadAssetImage(
+    context: Context,
+    assetPath: String,
+    fullSize: Boolean,
+): ImageBitmap? = runCatching {
+    val options = BitmapFactory.Options().apply {
+        if (!fullSize) inSampleSize = CARD_SAMPLE_SIZE
+    }
+    context.assets.open(assetPath).use { stream ->
+        BitmapFactory.decodeStream(stream, null, options)?.asImageBitmap()
+    }
+}.getOrNull()

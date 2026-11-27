@@ -3,7 +3,7 @@
 
 Стиль: мягкая пастельная «плюшевая» графика с тёплым контуром, крупными
 глазами, аккуратными тенями и лёгким кремовым ореолом. Все картинки
-квадратные 512×512 с прозрачным фоном. Рисуем в 4× и уменьшаем — так контуры
+квадратные 1024×1024 с прозрачным фоном. Рисуем в 4× и уменьшаем — так контуры
 остаются гладкими.
 """
 import math
@@ -97,7 +97,11 @@ ELEPHANT_LIGHT = (216, 223, 229, 255)
 ELEPHANT_DARK = (136, 148, 159, 255)
 
 SCALE = 4
-SIZE = 512
+SIZE = 1024
+# Координаты ниже нарисованы в сетке 512: это «дизайнерские» пиксели.
+# Холст и итоговый PNG крупнее в [SIZE] / [DESIGN_SIZE] раз — так иллюстрация
+# остаётся резкой в крупном плане на экранах с высокой плотностью.
+DESIGN_SIZE = 512
 STROKE = 6
 
 
@@ -106,11 +110,11 @@ def scaled(value):
 
 
 class Canvas:
-    """Холст 512×512 с координатами в «дизайнерских» пикселях."""
+    """Холст 512×512 в «дизайнерских» пикселях, рисуется в [SCALE] раз крупнее."""
 
     def __init__(self):
         self.image = Image.new(
-            "RGBA", (SIZE * SCALE, SIZE * SCALE), (0, 0, 0, 0)
+            "RGBA", (DESIGN_SIZE * SCALE, DESIGN_SIZE * SCALE), (0, 0, 0, 0)
         )
         self.draw = ImageDraw.Draw(self.image)
         self.stroke = STROKE * SCALE
@@ -299,7 +303,7 @@ class Canvas:
             (max(1, int(art.width * ratio)), max(1, int(art.height * ratio))),
             Image.LANCZOS,
         )
-        canvas = Image.new("RGBA", (SIZE * SCALE, SIZE * SCALE), (0, 0, 0, 0))
+        canvas = Image.new("RGBA", (DESIGN_SIZE * SCALE, DESIGN_SIZE * SCALE), (0, 0, 0, 0))
         canvas.alpha_composite(
             art,
             ((canvas.width - art.width) // 2, (canvas.height - art.height) // 2),
@@ -308,7 +312,7 @@ class Canvas:
         final = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
         final.alpha_composite(self.warm_halo())
         final.alpha_composite(canvas)
-        path = os.path.join(OUT, f"{name}_512.png")
+        path = os.path.join(OUT, f"{name}_{SIZE}.png")
         final.resize((SIZE, SIZE), Image.LANCZOS).save(path, "PNG", optimize=True)
         return path
 

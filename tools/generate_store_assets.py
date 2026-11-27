@@ -43,7 +43,7 @@ def rounded_mask(size: int, radius: int) -> Image.Image:
 def cow_art() -> Image.Image:
     """Корова без прозрачных полей вокруг: иначе в мелком размере она мелкая."""
     cow_path = os.path.join(
-        ROOT, "app", "src", "main", "assets", "images", "cow_512.png"
+        ROOT, "app", "src", "main", "assets", "images", "cow_1024.png"
     )
     art = Image.open(cow_path).convert("RGBA")
     return art.crop(art.getbbox())

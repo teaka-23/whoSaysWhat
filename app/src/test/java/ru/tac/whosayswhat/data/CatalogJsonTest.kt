@@ -55,7 +55,10 @@ class CatalogJsonTest {
     }
 
     @Test
-    fun `artwork is 512 square with transparent background`() {
+    fun `artwork is 1024 square with transparent background`() {
+        // 1024 — размер для крупного плана: на карточке картинка рисуется
+        // мельче, но в увеличенном окне 512 размывалась бы на экранах с
+        // высокой плотностью.
         val catalog = json.decodeFromString<Catalog>(
             File(assetsDir, "catalog.json").readText(),
         )
@@ -75,8 +78,8 @@ class CatalogJsonTest {
                 bytes.copyOfRange(0, 8).contentEquals(pngSignature),
             )
             val header = ByteBuffer.wrap(bytes).order(ByteOrder.BIG_ENDIAN)
-            assertEquals("Ширина $path", 512, header.getInt(16))
-            assertEquals("Высота $path", 512, header.getInt(20))
+            assertEquals("Ширина $path", 1024, header.getInt(16))
+            assertEquals("Высота $path", 1024, header.getInt(20))
             val colorType = bytes[25].toInt() and 0xFF
             assertTrue(
                 "У $path нет альфа-канала (colorType=$colorType)",

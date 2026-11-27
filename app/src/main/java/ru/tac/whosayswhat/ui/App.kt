@@ -39,11 +39,16 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import ru.tac.whosayswhat.audio.EchoRecorder
 import ru.tac.whosayswhat.audio.SoundPlayer
 import ru.tac.whosayswhat.audio.SpeechAnnouncer
 import ru.tac.whosayswhat.audio.scheduleRecordAudioPermissionRevocation
+import ru.tac.whosayswhat.audio.spotlightFloorMs
+import ru.tac.whosayswhat.audio.spotlightMaxWaitMs
 import ru.tac.whosayswhat.data.Animal
 import ru.tac.whosayswhat.data.AnimalProgress
 import ru.tac.whosayswhat.data.Catalog
@@ -162,12 +167,20 @@ fun App(
     var screen by remember { mutableStateOf<Screen>(Screen.Sandbox) }
     var parentPanel by remember { mutableStateOf(false) }
     var echoAnimal by remember { mutableStateOf<Animal?>(null) }
+    // Крупный план животного: null — песочница на весь экран. Номер показа
+    // отсекает запоздавший таймер прошлой карточки: ребёнок уже тапнул другое
+    // животное, и старое окно не должно закрыть новое.
+    var closeUpAnimal by remember { mutableStateOf<Animal?>(null) }
+    var closeUpToken by remember { mutableIntStateOf(0) }
 
     // Название относится только к песочнице: в игре, панели родителей
     // и диалоге «Эхо» оно не должно досказываться поверх интерфейса.
     LaunchedEffect(screen, parentPanel, echoAnimal) {
         if (screen != Screen.Sandbox || parentPanel || echoAnimal != null) {
             announcer.stop()
+            // Крупный план — тоже часть песочницы: под панелью или поверх
+            // игры он не нужен.
+            closeUpAnimal = null
         }
     }
 
@@ -190,10 +203,47 @@ fun App(
     BackHandler {
         when {
             echoAnimal != null -> echoAnimal = null
+            // Крупный план перехватывает Back сам (это Dialog), но ветка
+            // страхует: ребёнок должен уметь вернуться к животным всегда.
+            closeUpAnimal != null -> closeUpAnimal = null
             parentPanel -> parentPanel = false
             catalogState is CatalogState.Failed -> onExitApp()
             screen != Screen.Sandbox -> screen = Screen.Sandbox
             else -> Unit
+        }
+    }
+
+    /**
+     * Показывает крупный план и запускает звук с озвучкой названия.
+     *
+     * Окно не обрывает звук: оно ждёт, пока договорит синтезатор речи, но не
+     * меньше нижней границы — иначе короткое «Мяу!» мелькало бы на экране.
+     * Повторный тап по увеличенной картинке вызывает эту же функцию: звук
+     * играет заново, и отсчёт начинается с начала.
+     */
+    fun showCloseUp(animal: Animal) {
+        val token = closeUpToken + 1
+        closeUpToken = token
+        closeUpAnimal = animal
+        val soundMs = soundPlayer.durationMs(animal.soundFile)
+        val floorMs = spotlightFloorMs(soundMs)
+        soundPlayer.play(animal.soundFile)
+        // Сигнал «фраза договорена» приходит и тогда, когда озвучки не будет
+        // вовсе (нет русского голоса) — иначе ждали бы таймаут зря.
+        val phraseDone = CompletableDeferred<Unit>()
+        announcer.announceAfter(
+            soundDurationMs = soundMs,
+            narrationName = animal.narrationName,
+            onFinished = { phraseDone.complete(Unit) },
+        )
+        scope.launch {
+            delay(floorMs)
+            // Синтезатор может не прислать колбэк: без предела картинка
+            // осталась бы поверх песочницы навсегда.
+            withTimeoutOrNull(spotlightMaxWaitMs(floorMs) - floorMs) {
+                phraseDone.await()
+            }
+            if (closeUpToken == token) closeUpAnimal = null
         }
     }
 
@@ -218,13 +268,7 @@ fun App(
                         animals = state.catalog.animals,
                         echoEnabled = echoEnabled,
                         preferredEchoAnimalId = echoAnimalId,
-                        onAnimalSound = { animal ->
-                            soundPlayer.play(animal.soundFile)
-                            announcer.announceAfter(
-                                soundDurationMs = soundPlayer.durationMs(animal.soundFile),
-                                narrationName = animal.narrationName,
-                            )
-                        },
+                        onAnimalSound = { animal -> showCloseUp(animal) },
                         onStartGame = { screen = Screen.Guess },
                         onEcho = { echoAnimal = it },
                         onOpenParentPanel = { parentPanel = true },
@@ -291,6 +335,18 @@ fun App(
                 } else {
                     null
                 },
+            )
+        }
+
+        // Крупный план — отдельное окно поверх песочницы: оно перехватывает
+        // фокус (TalkBack читает название и звукоподражание) и закрывается
+        // кнопкой Back или тапом по затемнённому фону.
+        val closeUp = closeUpAnimal
+        if (closeUp != null) {
+            AnimalCloseUp(
+                animal = closeUp,
+                onRepeat = { showCloseUp(closeUp) },
+                onDismiss = { closeUpAnimal = null },
             )
         }
 

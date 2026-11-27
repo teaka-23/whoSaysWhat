@@ -32,6 +32,15 @@ data class Animal(
      */
     val narrationName: String
         get() = affectionateName?.trim()?.takeIf { it.isNotEmpty() } ?: name
+
+    /**
+     * Подпись «Му-у-у!» для крупного плана: полное звукоподражание, если оно
+     * задано, иначе короткое «Му». null — подписи нет, и пустую строку под
+     * названием рисовать незачем.
+     */
+    val closeUpOnomatopoeia: String?
+        get() = onomatopoeiaText.trim().takeIf { it.isNotEmpty() }
+            ?: simpleOnomatopoeia?.trim()?.takeIf { it.isNotEmpty() }
 }
 
 @Serializable
