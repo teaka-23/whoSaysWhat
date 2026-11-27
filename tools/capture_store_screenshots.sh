@@ -3,7 +3,7 @@
 #
 # Требования консоли (поле «Телефон», 16:9): до 5 МБ, максимум 3840×2160,
 # рекомендуем JPG 1920×1080. Скрипт выставляет на эмуляторе ровно 1920×1080,
-# проходит по трём экранам и сохраняет JPG в store/screenshots.
+# проходит по экранам и сохраняет JPG в store/screenshots.
 #
 # Использование:
 #   tools/capture_store_screenshots.sh [путь-к-adb]
@@ -72,25 +72,34 @@ PY
 echo "1. Песочница"
 snap "01-sandbox-$SIZE"
 
+# Карточка коровы в первой ячейке сетки. Окно живёт от 2,5 до 6,5 с, поэтому
+# кадр снимаем сразу после тапа, а потом ждём автозакрытия: иначе следующий
+# тап по «Играть» попадёт в окно и звук заиграет заново.
+echo "2. Крупный план"
+tap 200 315
+sleep 1
+snap "02-closeup-$SIZE"
+sleep 7
+
 # Замок в правом верхнем углу; кнопка «Играть» — внизу по центру.
-echo "2. Игра «Угадай»"
+echo "3. Игра «Угадай»"
 tap 960 966
 sleep 3
-snap "02-guess-$SIZE"
+snap "03-guess-$SIZE"
 
-echo "3. Для родителей"
+echo "4. Для родителей"
 "$ADB" shell input keyevent 4
 sleep 1
 tap 1855 118
 tap 1855 118
 tap 1855 118
 sleep 2
-snap "03-parents-$SIZE"
+snap "04-parents-$SIZE"
 
-echo "4. Приватность (прокрутка панели)"
+echo "5. Приватность (прокрутка панели)"
 swipe 960 900 960 250 400
 sleep 1
-snap "04-privacy-$SIZE"
+snap "05-privacy-$SIZE"
 
 "$ADB" shell input keyevent 4 >/dev/null
 "$ADB" shell wm size reset >/dev/null
